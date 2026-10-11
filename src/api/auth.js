@@ -4,8 +4,10 @@ import instance from "./axios.js";
 
 export const AUTH_ENDPOINTS = {
   login: "/api/auth/login",
+  register: "/api/auth/register",
   refresh: "/api/auth/refresh",
   user: "/api/auth/user",
+  validateUsername: "/api/auth/validate/username",
 };
 
 export async function loginRequest({ login, password }) {
@@ -25,6 +27,35 @@ export async function loginRequest({ login, password }) {
     throw new Error("Phản hồi đăng nhập không hợp lệ (thiếu token/user)");
   }
   return { user, accessToken, refreshToken, expiresIn };
+}
+
+// Register. Payload: { username, email, password, password_confirmation }.
+// Resolves on success (no tokens — account needs email verification).
+// Rejects with the axios error so the caller can read response errors.
+export async function registerRequest({
+  username,
+  email,
+  password,
+  password_confirmation,
+}) {
+  const response = await instance.post(AUTH_ENDPOINTS.register, {
+    username,
+    email,
+    password,
+    password_confirmation,
+  });
+  return response.data?.data ?? response.data ?? {};
+}
+
+// Live-check username availability (debounced by caller).
+// 200 + { data: { available: true|false } }; 422 carries field errors.
+// Returns { available: boolean } on 200, throws otherwise.
+export async function validateUsername(username) {
+  const response = await instance.post(AUTH_ENDPOINTS.validateUsername, {
+    username,
+  });
+  const data = response.data?.data ?? response.data ?? {};
+  return { available: data.available !== false };
 }
 
 // Get current user info. Backend envelope: { data: { user } | user | {...} }

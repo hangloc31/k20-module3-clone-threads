@@ -1,16 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate, Navigate } from "react-router";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
 import { loginRequest } from "../../api/auth.js";
+import { loginSchema } from "./schemas.js";
+
+const inputCls =
+  "w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 outline-none";
 
 const Login = () => {
-  const [form, setForm] = useState({
-    login: "",
-    password: "",
-  });
-
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isValid },
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    mode: "onChange",
+    defaultValues: { login: "", password: "" },
+  });
 
   const login = useAuthStore((state) => state.login);
   const fetchCurrentUser = useAuthStore((state) => state.fetchCurrentUser);
@@ -21,35 +32,17 @@ const Login = () => {
   // nếu đã login mà cố vào /login (F5) thì đá luôn, khỏi cần chờ submit
   if (isAuthenticated) return <Navigate to="/" replace />;
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const serverError = errors.root?.server?.message;
 
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const canSubmit =
-    form.login.trim().length > 0 && form.password.length > 0 && !loading;
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!canSubmit) {
-      setError("Vui lòng nhập đầy đủ tài khoản và mật khẩu");
-      return;
-    }
-
+  const onSubmit = async (data) => {
     setLoading(true);
-    setError("");
     try {
       const { user, accessToken, refreshToken, expiresIn } =
-        await loginRequest(form);
+        await loginRequest(data);
 
       login({ user, accessToken, refreshToken, expiresIn });
 
-      // Load canonical user info into global state; keep the
-      // login-response user as fallback so a /user failure never blocks login.
+      // Load canonical user info; keep login-response user as fallback.
       try {
         await fetchCurrentUser();
       } catch {
@@ -63,58 +56,66 @@ const Login = () => {
         console.error("Login failed:", error.response?.data ?? error.message);
       }
       const status = error.response?.status;
-      const data = error.response?.data;
+      const resp = error.response?.data;
       const fieldMessage =
-        data?.errors?.login?.[0] ||
-        data?.errors?.password?.[0] ||
-        (typeof data?.errors === "object"
-          ? Object.values(data.errors).flat()[0]
+        resp?.errors?.login?.[0] ||
+        resp?.errors?.password?.[0] ||
+        (typeof resp?.errors === "object"
+          ? Object.values(resp.errors).flat()[0]
           : null);
-      setError(
-        fieldMessage ||
-          data?.message ||
+      setError("root.server", {
+        message:
+          fieldMessage ||
+          resp?.message ||
           (status === 0 || !status
             ? "Không kết nối được tới server"
             : "Đăng nhập thất bại"),
-      );
+      });
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <form
-      onSubmit={handleLogin}
+      onSubmit={handleSubmit(onSubmit)}
       className="w-full max-w-sm rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-6 space-y-4"
     >
       <h1 className="text-xl font-bold">Đăng nhập</h1>
 
-      {error && (
+      {serverError && (
         <p role="alert" className="text-sm text-red-600">
-          {error}
+          {serverError}
         </p>
       )}
 
-      <input
-        type="text"
-        name="login"
-        value={form.login}
-        onChange={handleChange}
-        placeholder="Username hoặc Email"
-        required
-        autoComplete="username"
-        className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 outline-none"
-      />
+      <div>
+        <input
+          type="text"
+          placeholder="Username hoặc Email"
+          required
+          autoComplete="username"
+          className={inputCls}
+          {...register("login")}
+        />
+        {errors.login && (
+          <p className="text-sm text-red-600 mt-1">{errors.login.message}</p>
+        )}
+      </div>
 
-      <input
-        type="password"
-        name="password"
-        value={form.password}
-        onChange={handleChange}
-        placeholder="Mật khẩu"
-        required
-        autoComplete="current-password"
-        className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 outline-none"
-      />
+      <div>
+        <input
+          type="password"
+          placeholder="Mật khẩu"
+          required
+          autoComplete="current-password"
+          className={inputCls}
+          {...register("password")}
+        />
+        {errors.password && (
+          <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
+        )}
+      </div>
 
       <div className="text-right">
         <Link
@@ -127,7 +128,7 @@ const Login = () => {
 
       <button
         type="submit"
-        disabled={!canSubmit}
+        disabled={!isValid || loading}
         className="w-full rounded-xl bg-black text-white dark:bg-white dark:text-black py-2 font-semibold disabled:opacity-40"
       >
         {loading ? "Đang đăng nhập..." : "Đăng nhập"}
