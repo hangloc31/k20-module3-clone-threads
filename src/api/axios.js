@@ -1,5 +1,6 @@
 import axios from "axios";
 import useAuthStore from "../stores/authStore";
+import { refreshTokens } from "./auth.js";
 
 // Single source of truth: VITE_API_URL must NOT include trailing /api.
 // All endpoint paths below include the /api prefix.
@@ -46,35 +47,30 @@ instance.interceptors.response.use(
       if (refreshToken && !isRefreshing) {
         isRefreshing = true;
         try {
-          const res = await axios.post(
-            `${instance.defaults.baseURL}/api/auth/refresh`,
-            { refresh_token: refreshToken },
-          );
-          const payload = res.data?.data ?? res.data;
-          const nextToken =
-            payload?.access_token ?? payload?.accessToken ?? null;
-          if (nextToken) {
-            useAuthStore.setState({
-              accessToken: nextToken,
-              expiresIn: payload?.expires_in ?? payload?.expiresIn ?? null,
-              expiresAt:
-                typeof (payload?.expires_in ?? payload?.expiresIn) ===
-                "number"
-                  ? Date.now() +
-                    (payload.expires_in ?? payload.expiresIn) * 1000
-                  : useAuthStore.getState().expiresAt,
-            });
-            original.headers.Authorization = `Bearer ${nextToken}`;
-            return instance(original);
-          }
+          const next = await refreshTokens(refreshToken);
+          useAuthStore.setState({
+            accessToken: next.accessToken,
+            refreshToken: next.refreshToken,
+            expiresIn: next.expiresIn,
+            expiresAt:
+              typeof next.expiresIn === "number"
+                ? Date.now() + next.expiresIn * 1000
+                : useAuthStore.getState().expiresAt,
+          });
+          original.headers.Authorization = `Bearer ${next.accessToken}`;
+          return instance(original);
         } catch {
-          // fall through to logout
+          // fall through to logout + redirect
         } finally {
           isRefreshing = false;
         }
       }
 
       logout();
+      // Refresh failed (or no refresh token): force back to /login
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+        window.location.assign("/login");
+      }
     }
 
     return Promise.reject(error);

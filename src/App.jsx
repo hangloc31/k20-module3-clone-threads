@@ -1,6 +1,7 @@
 import { Route, Routes, Navigate } from "react-router";
 import Home from "./pages/HomePage";
-import LoginPage from "./pages/LoginPage";
+import Login from "./pages/Auth/Login";
+import AuthLayout from "./layouts/AuthLayout";
 import NotFound from "./pages/NotFound";
 
 import { GuestRoute } from "./components/ProtectedRoute";
@@ -13,13 +14,14 @@ function App() {
 
       {/* Guest-only: login rồi tự đá về / */}
       <Route
-        path="/login"
         element={
           <GuestRoute>
-            <LoginPage />
+            <AuthLayout />
           </GuestRoute>
         }
-      />
+      >
+        <Route path="/login" element={<Login />} />
+      </Route>
 
       {/* Legacy dashboard route: redirect về / (feed auth-aware) */}
       <Route path="/dashboard" element={<Navigate to="/" replace />} />
