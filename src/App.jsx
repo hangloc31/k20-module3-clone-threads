@@ -1,15 +1,28 @@
-import { Route, Routes } from "react-router";
+import { Route, Routes, Navigate } from "react-router";
 import Home from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
-import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+
+import { GuestRoute } from "./components/ProtectedRoute";
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/home" element={<Navigate to="/" replace />} />
+
+      {/* Guest-only: login rồi tự đá về / */}
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <LoginPage />
+          </GuestRoute>
+        }
+      />
+
+      {/* Legacy dashboard route: redirect về / (feed auth-aware) */}
+      <Route path="/dashboard" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
