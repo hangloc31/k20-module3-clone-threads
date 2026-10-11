@@ -1,6 +1,7 @@
 import { Route, Routes, Navigate } from "react-router";
 import Home from "./pages/HomePage";
 import Login from "./pages/Auth/Login";
+import Register from "./pages/Auth/Register";
 import AuthLayout from "./layouts/AuthLayout";
 import NotFound from "./pages/NotFound";
 
@@ -21,6 +22,7 @@ function App() {
         }
       >
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
       </Route>
 
       {/* Legacy dashboard route: redirect về / (feed auth-aware) */}
