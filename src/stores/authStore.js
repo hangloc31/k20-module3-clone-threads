@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { getUserInfo } from "../api/auth.js";
 
 const isExpired = (expiresAt) =>
   typeof expiresAt === "number" && Date.now() >= expiresAt;
@@ -31,6 +32,14 @@ const useAuthStore = create(
           expiresIn: null,
           expiresAt: null,
         }),
+      // Fetch current user info (/api/auth/user) into global state.
+      // Throws on failure — caller decides (login flow keeps the
+      // login-response user as fallback so it never gets stuck).
+      fetchCurrentUser: async () => {
+        const user = await getUserInfo();
+        set({ user });
+        return user;
+      },
       // Derived helper (not persisted as boolean): valid token + not expired
       isLoggedIn: () => {
         const { accessToken, expiresAt } = get();

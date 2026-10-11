@@ -133,3 +133,21 @@ html {
   scrollbar-width: thin;
   scrollbar-color: rgb(163 163 163 / 0.5) transparent;
 }
+
+/* Gentle float for the 404 glyph — off by default, only enabled when
+   the user has no reduced-motion preference. */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-thread-float {
+    animation: thread-float 4s ease-in-out infinite;
+  }
+}
+
+@keyframes thread-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
