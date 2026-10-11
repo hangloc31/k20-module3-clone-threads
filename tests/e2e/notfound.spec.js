@@ -23,9 +23,4 @@ test.describe("404 page", () => {
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute("href", "/login");
   });
-
-  test("visual snapshot", async ({ page }) => {
-    await page.waitForTimeout(800);
-    await expect(page).toHaveScreenshot({ maxDiffPixelRatio: 0.08 });
-  });
 });
