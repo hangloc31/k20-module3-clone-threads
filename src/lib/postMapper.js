@@ -17,6 +17,10 @@ export const mapPost = (post) => {
   const likesCount = post.likes_count ?? 0;
   const repliesCount = post.replies_count ?? 0;
   const repostsCount = post.reposts_and_quotes_count ?? 0;
+  const hashtags = extractHashtags(post.content);
+  const textPlain = hashtags.length
+    ? (post.content ?? "").replace(/#[\p{L}\p{N}_]+/gu, "").trim()
+    : (post.content ?? "");
 
   return {
     id: post.id,
@@ -28,7 +32,8 @@ export const mapPost = (post) => {
     time: formatRelativeTime(post.created_at),
     createdAt: post.created_at,
     text: post.content ?? "",
-    hashtags: extractHashtags(post.content),
+    textPlain,
+    hashtags,
     image,
     video,
     likes: formatCount(likesCount),

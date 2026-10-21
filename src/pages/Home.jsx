@@ -1,79 +1,54 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router";
 import PostCard from "../components/post/PostCard.jsx";
+import CreateThreadBox from "../components/threads/CreateThreadBox.jsx";
 import VerifyEmailBanner from "../components/threads/VerifyEmailBanner.jsx";
+import ThreadsLogo from "../components/threads/ThreadsLogo.jsx";
+import ThemeToggle from "../components/threads/ThemeToggle.jsx";
 import { Skeleton } from "../components/ui/skeleton.jsx";
-import useFeedStore, { FEED_TABS } from "../stores/feedStore.js";
+import useFeedStore from "../stores/feedStore.js";
 import useAuthStore, { selectIsAuthenticated } from "../stores/authStore.js";
 import { useInfiniteScroll } from "../hooks/useInfiniteScroll.js";
 
 const Home = () => {
   const posts = useFeedStore((s) => s.posts);
-  const tab = useFeedStore((s) => s.tab);
   const loading = useFeedStore((s) => s.loading);
   const loadingMore = useFeedStore((s) => s.loadingMore);
   const error = useFeedStore((s) => s.error);
   const source = useFeedStore((s) => s.source);
   const hasMore = useFeedStore((s) => s.hasMore);
-  const following = useFeedStore((s) => s.following);
   const fetchFeed = useFeedStore((s) => s.fetchFeed);
   const loadMore = useFeedStore((s) => s.loadMore);
-  const setTab = useFeedStore((s) => s.setTab);
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
 
   useEffect(() => {
     fetchFeed({ reset: true });
   }, [fetchFeed]);
 
-  // The API has no dedicated endpoints for these tabs, so they are filtered
-  // client-side from the same feed.
-  const visiblePosts = useMemo(() => {
-    if (tab === "ghost") return posts.filter((post) => post.isGhost);
-    if (tab === "following") {
-      const names = new Set(following);
-      return posts.filter((post) => names.has(post.username));
-    }
-    return posts;
-  }, [posts, tab, following]);
-
   const sentinelRef = useInfiniteScroll({
     onLoadMore: loadMore,
     enabled: hasMore && !loading && !loadingMore,
   });
+
   return (
     <div>
-      <header className="sticky top-0 z-20 bg-white/85 dark:bg-[#101010]/85 backdrop-blur border-b border-neutral-200 dark:border-neutral-800">
-        <div className="flex items-center h-14 px-1">
+      {/* Top bar */}
+      <header className="sticky top-0 z-20 bg-white/85 dark:bg-[#101010]/85 backdrop-blur">
+        <div className="h-14 flex items-center justify-between">
+          <Link to="/" aria-label="Threads home" className="lg:hidden">
+            <ThreadsLogo variant="glyph" className="w-6 h-6" />
+          </Link>
           <h1 className="font-bold text-[17px]">Trang chủ</h1>
-        </div>
-        <div className="flex" role="tablist" aria-label="Chọn nguồn feed">
-          {FEED_TABS.map((item) => {
-            const active = tab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                data-testid={`feed-tab-${item.id}`}
-                onClick={() => setTab(item.id)}
-                className={`flex-1 py-3 text-[15px] relative transition ${
-                  active
-                    ? "font-semibold text-neutral-900 dark:text-neutral-100"
-                    : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
-                }`}
-              >
-                {item.label}
-                {active && (
-                  <span className="absolute inset-x-0 -bottom-px h-0.5 bg-black dark:bg-white" />
-                )}
-              </button>
-            );
-          })}
+          <ThemeToggle
+            variant="icon"
+            testId="theme-toggle-header"
+            className="md:hidden"
+          />
         </div>
       </header>
 
-      <main data-testid="threads-feed" className="pt-3">
+      {/* Feed */}
+      <main data-testid="threads-feed" className="pt-3 pb-16">
         <VerifyEmailBanner />
 
         {source === "mock" && (
@@ -85,27 +60,7 @@ const Home = () => {
           </p>
         )}
 
-        {!isAuthenticated && (
-          <div
-            data-testid="feed-login-banner"
-            className="lg:hidden mb-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 px-4 py-3 flex items-center justify-between gap-3"
-          >
-            <p className="text-sm text-neutral-500">Đăng nhập để xem thêm</p>
-            <Link
-              to="/login"
-              data-testid="banner-login-btn"
-              className="rounded-xl bg-black text-white dark:bg-white dark:text-black px-3 py-1.5 text-sm font-semibold"
-            >
-              Đăng nhập
-            </Link>
-          </div>
-        )}
-
-        {error && (
-          <p role="alert" className="text-sm text-red-600 px-2 py-2">
-            {error}
-          </p>
-        )}
+        {isAuthenticated && <CreateThreadBox />}
 
         {loading && posts.length === 0 && (
           <div className="space-y-4" data-testid="feed-skeleton">
@@ -125,19 +80,15 @@ const Home = () => {
           </div>
         )}
 
-        {visiblePosts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
-
-        {!loading && visiblePosts.length === 0 && (
-          <p className="text-sm text-neutral-500 px-2 py-6" data-testid="feed-empty">
-            {tab === "following"
-              ? "Bạn chưa theo dõi ai, hoặc những người bạn theo dõi chưa đăng bài."
-              : tab === "ghost"
-                ? "Chưa có bài viết ghost nào."
-                : "Chưa có bài viết nào."}
+        {error && (
+          <p role="alert" className="text-sm text-red-600 px-2 py-2">
+            {error}
           </p>
         )}
+
+        {posts.map((post) => (
+          <PostCard key={post.id} post={post} />
+        ))}
 
         <div ref={sentinelRef} data-testid="feed-sentinel" className="h-px" />
 
@@ -146,6 +97,38 @@ const Home = () => {
             Đang tải thêm...
           </p>
         )}
+
+        {/* Compact legal footer for tablet/mobile (desktop shows the panel footer) */}
+        <footer className="lg:hidden px-6 py-8 text-[13px] text-neutral-500 space-y-2">
+          <p className="flex flex-wrap gap-x-3">
+            <span>© 2026</span>
+            <a
+              className="hover:underline"
+              href="https://help.instagram.com/769983657850450"
+            >
+              Điều khoản của Threads
+            </a>
+            <a
+              className="hover:underline"
+              href="https://help.instagram.com/515230437301944"
+            >
+              Chính sách quyền riêng tư
+            </a>
+            <a
+              className="hover:underline"
+              href="https://help.instagram.com/1896641480634370/"
+            >
+              Chính sách cookie
+            </a>
+          </p>
+          {!isAuthenticated && (
+            <p>
+              <Link to="/login" className="hover:underline">
+                Đăng nhập bằng tên người dùng
+              </Link>
+            </p>
+          )}
+        </footer>
       </main>
     </div>
   );

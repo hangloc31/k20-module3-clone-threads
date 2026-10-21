@@ -2,7 +2,6 @@ import { create } from "zustand";
 import {
   createPost as createPostRequest,
   fetchFeed,
-  fetchFollowings,
   toggleLike as toggleLikeRequest,
 } from "../api/posts.js";
 import {
@@ -11,19 +10,11 @@ import {
   toggleLikeMock,
 } from "../api/threadsMock.js";
 import { formatCount } from "../lib/format.js";
-import useAuthStore from "./authStore.js";
 
 export const FEED_PER_PAGE = 20;
 
-export const FEED_TABS = [
-  { id: "for_you", label: "For you" },
-  { id: "following", label: "Following" },
-  { id: "ghost", label: "Ghost posts" },
-];
-
 const useFeedStore = create((set, get) => ({
   posts: [],
-  tab: "for_you",
   page: 1,
   hasMore: true,
   loading: false,
@@ -31,7 +22,6 @@ const useFeedStore = create((set, get) => ({
   error: "",
   // "api" = live data, "mock" = offline fallback
   source: "api",
-  following: [],
 
   // Loads a page of posts. Falls back to the bundled mock when the API fails
   // so the app never renders an empty shell.
@@ -94,29 +84,6 @@ const useFeedStore = create((set, get) => ({
     const { loading, loadingMore, hasMore } = get();
     if (loading || loadingMore || !hasMore) return;
     await get().fetchFeed({ reset: false });
-  },
-
-  setTab: async (tab) => {
-    if (get().tab === tab) return;
-    set({ tab, error: "" });
-    if (tab === "following") {
-      await get().loadFollowing();
-    }
-    await get().fetchFeed({ reset: true });
-  },
-
-  loadFollowing: async () => {
-    const user = useAuthStore.getState().user;
-    if (!user?.id) {
-      set({ following: [] });
-      return;
-    }
-    try {
-      const following = await fetchFollowings(user.id);
-      set({ following });
-    } catch {
-      set({ following: [] });
-    }
   },
 
   // Optimistic like/unlike: flip the state immediately, roll back on error.

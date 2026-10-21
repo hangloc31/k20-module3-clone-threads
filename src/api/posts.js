@@ -9,7 +9,6 @@ export const POSTS_ENDPOINTS = {
   post: (id) => `/api/posts/${id}`,
   replies: (id) => `/api/posts/${id}/replies`,
   like: (id) => `/api/posts/${id}/like`,
-  followings: (userId) => `/api/users/${userId}/followings`,
 };
 
 // GET /api/posts/feed?page=&per_page= -> { data: [...], pagination: {...} }
@@ -61,15 +60,4 @@ export async function createPost({ content }) {
   const response = await instance.post("/api/posts", { content });
   const body = response.data ?? {};
   return mapPost(body.data?.post ?? body.data ?? body);
-}
-
-// GET /api/users/{id}/followings -> list of users the account follows
-export async function fetchFollowings(userId) {
-  if (!userId) return [];
-  const response = await instance.get(POSTS_ENDPOINTS.followings(userId));
-  const body = response.data ?? {};
-  const items = Array.isArray(body.data)
-    ? body.data
-    : (body.data?.users ?? body.data?.followings ?? []);
-  return items.map((user) => user?.username).filter(Boolean);
 }
