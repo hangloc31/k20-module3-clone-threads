@@ -1,31 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-const seedAuth = (page, { emailVerified }) => {
-  return page.addInitScript(
-    ({ verified }) => {
-      window.localStorage.setItem(
-        "auth-storage",
-        JSON.stringify({
-          state: {
-            user: {
-              id: 42,
-              name: "banner_user",
-              username: "banner_user",
-              email: "banner@x.com",
-              email_verified_at: verified ? "2026-10-20T10:00:00.000000Z" : null,
-            },
-            accessToken: "seeded-access-token",
-            refreshToken: "seeded-refresh-token",
-            expiresIn: 3600,
-            expiresAt: Date.now() + 3600 * 1000,
-          },
-          version: 0,
-        }),
-      );
-    },
-    { verified: emailVerified },
-  );
-};
+import { seedAuth } from "./helpers/seedAuth.js";
 
 test.describe("unverified email banner", () => {
   test("shows the banner for a signed-in user without a verified email", async ({
@@ -49,7 +23,10 @@ test.describe("unverified email banner", () => {
     await seedAuth(page, { emailVerified: false });
     const calls = [];
     await page.route("**/api/auth/resend-verification-email", (route) => {
-      calls.push(route.request().method());
+      calls.push({
+        method: route.request().method(),
+        authorization: route.request().headers().authorization ?? null,
+      });
       return route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -64,7 +41,9 @@ test.describe("unverified email banner", () => {
     await expect(page.getByTestId("resend-status")).toContainText(
       "Đã gửi lại email xác thực",
     );
-    expect(calls).toEqual(["POST"]);
+    expect(calls).toEqual([
+      { method: "POST", authorization: "Bearer seeded-access-token" },
+    ]);
   });
 
   test("shows an error when resending fails", async ({ page }) => {
