@@ -2,8 +2,7 @@ import { test, expect } from "@playwright/test";
 import { seedAuth } from "./helpers/seedAuth.js";
 import { mockFeed, makeApiFeed } from "./helpers/feedFixture.js";
 
-const seedUser = (page, { id = 42 } = {}) =>
-  seedAuth(page, { accessToken: "seeded-access-token" });
+const seedUser = (page) => seedAuth(page, { accessToken: "seeded-access-token" });
 
 const ownPost = () =>
   makeApiPostWithUser({ id: 99, user_id: 42, username: "me" });

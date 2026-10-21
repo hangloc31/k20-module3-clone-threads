@@ -1,12 +1,8 @@
 import { create } from "zustand";
 import {
   createPost as createPostRequest,
-  deletePost as deletePostRequest,
   fetchFeed,
-  hidePost as hidePostRequest,
-  savePost as savePostRequest,
   toggleLike as toggleLikeRequest,
-  updatePost as updatePostRequest,
 } from "../services/postService.js";
 import {
   createPostMock,
@@ -150,7 +146,7 @@ const useFeedStore = create((set, get) => ({
       const post = await createPostRequest({ content: text });
       set({ posts: [post, ...get().posts] });
       return post;
-    } catch (error) {
+    } catch {
       const post = await createPostMock({ content: text });
       set({ posts: [post, ...get().posts], source: "mock" });
       return post;
@@ -163,6 +159,20 @@ const useFeedStore = create((set, get) => ({
     set({
       posts: get().posts.map((post) =>
         post.id === id ? { ...post, saved: Boolean(isSaved) } : post,
+      ),
+    }),
+
+  // Keeps the reply counter in sync after a reply was posted.
+  bumpReplyCount: (id) =>
+    set({
+      posts: get().posts.map((post) =>
+        post.id === id
+          ? {
+              ...post,
+              repliesCount: (post.repliesCount ?? 0) + 1,
+              replies: formatCount((post.repliesCount ?? 0) + 1),
+            }
+          : post,
       ),
     }),
 

@@ -9,12 +9,18 @@ export const POSTS_ENDPOINTS = {
   feed: "/api/posts/feed",
   post: (id) => `/api/posts/${id}`,
   replies: (id) => `/api/posts/${id}/replies`,
+  reply: (id) => `/api/posts/${id}/reply`,
   like: (id) => `/api/posts/${id}/like`,
   save: (id) => `/api/posts/${id}/save`,
   hide: (id) => `/api/posts/${id}/hide`,
   report: (id) => `/api/posts/${id}/report`,
   userAction: (id, action) => `/api/users/${id}/${action}`,
 };
+
+// The shared axios instance defaults to JSON. Multipart requests must
+// declare their content type, otherwise axios' transformRequest turns the
+// FormData into JSON and the backend cannot parse the files.
+const MULTIPART = { "Content-Type": "multipart/form-data" };
 
 // GET /api/posts/feed?page=&per_page= -> { data: [...], pagination: {...} }
 export async function fetchFeed({ page = 1, perPage = 20 } = {}) {
@@ -35,6 +41,41 @@ export async function fetchPost(id) {
   const body = response.data ?? {};
   const post = body.data?.post ?? body.data ?? body;
   return mapPost(post);
+}
+
+// POST /api/posts/{id}/reply — multipart: content + media[] files.
+// reply_permission ("everyone" | "following") is honoured by the backend.
+// Note: parent_id is ignored — a reply always belongs to the post itself.
+export async function createReply({
+  postId,
+  content,
+  files = [],
+  replyPermission = "everyone",
+}) {
+  const form = new FormData();
+  form.append("content", content);
+  form.append("reply_permission", replyPermission);
+  for (const file of files) {
+    form.append("media[]", file);
+  }
+  const response = await instance.post(POSTS_ENDPOINTS.reply(postId), form, {
+    headers: MULTIPART,
+  });
+  const body = response.data ?? {};
+  return mapPost(body.data?.post ?? body.data ?? body);
+}
+
+// POST /api/upload/media — multipart: media[] files. Returns the CDN urls.
+export async function uploadMedia(files = []) {
+  const form = new FormData();
+  for (const file of files) {
+    form.append("media[]", file);
+  }
+  const response = await instance.post("/api/upload/media", form, {
+    headers: MULTIPART,
+  });
+  const body = response.data ?? {};
+  return body.data?.urls ?? [];
 }
 
 // GET /api/posts/{id}/replies?page= -> { data: [...], pagination: {...} }
