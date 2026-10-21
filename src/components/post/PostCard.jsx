@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import InteractionBar from "./InteractionBar.jsx";
+import PostMenu from "./PostMenu.jsx";
+import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
 
 const aCls = "w-5 h-5";
 
@@ -29,6 +31,7 @@ function VerifiedBadge() {
 // interaction bar (mirrors the Threads card).
 const PostCard = ({ post }) => {
   const [muted, setMuted] = useState(true);
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
 
   return (
     <article
@@ -56,13 +59,17 @@ const PostCard = ({ post }) => {
           </Link>
         </div>
         <span className="flex-1" />
-        <Link
-          to="/login"
-          aria-label="More options"
-          className="text-neutral-500 hover:text-black dark:hover:text-white px-2 tracking-widest"
-        >
-          •••
-        </Link>
+        {isAuthenticated ? (
+          <PostMenu post={post} />
+        ) : (
+          <Link
+            to="/login"
+            aria-label="More options"
+            className="text-neutral-500 hover:text-black dark:hover:text-white px-2 tracking-widest"
+          >
+            •••
+          </Link>
+        )}
       </div>
 
       <div className="pl-[52px]">

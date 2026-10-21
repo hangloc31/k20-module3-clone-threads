@@ -1,9 +1,13 @@
 import { create } from "zustand";
 import {
   createPost as createPostRequest,
+  deletePost as deletePostRequest,
   fetchFeed,
+  hidePost as hidePostRequest,
+  savePost as savePostRequest,
   toggleLike as toggleLikeRequest,
-} from "../api/posts.js";
+  updatePost as updatePostRequest,
+} from "../services/postService.js";
 import {
   createPostMock,
   fetchFeedMock,
@@ -152,6 +156,28 @@ const useFeedStore = create((set, get) => ({
       return post;
     }
   },
+
+  // Post menu actions. The API call happens in the component; the store
+  // only keeps the feed list in sync.
+  savePost: (id, isSaved) =>
+    set({
+      posts: get().posts.map((post) =>
+        post.id === id ? { ...post, saved: Boolean(isSaved) } : post,
+      ),
+    }),
+
+  hidePost: (id) =>
+    set({ posts: get().posts.filter((post) => post.id !== id) }),
+
+  deletePost: (id) =>
+    set({ posts: get().posts.filter((post) => post.id !== id) }),
+
+  updatePost: (id, updated) =>
+    set({
+      posts: get().posts.map((post) =>
+        post.id === id ? { ...post, ...updated } : post,
+      ),
+    }),
 
   clearError: () => set({ error: "" }),
 }));

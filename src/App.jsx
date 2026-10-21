@@ -4,6 +4,7 @@ import Create from "./pages/Create";
 import Search from "./pages/Search";
 import Activity from "./pages/Activity";
 import Profile from "./pages/Profile";
+import PostDetail from "./pages/PostDetail";
 import Login from "./pages/Auth/Login";
 import Register from "./pages/Auth/Register";
 import VerifyEmail from "./pages/Auth/VerifyEmail";
@@ -25,6 +26,8 @@ function App() {
         <Route path="/search" element={<Search />} />
         <Route path="/activity" element={<Activity />} />
         <Route path="/profile" element={<Profile />} />
+        {/* Single post: /:username/post/:postId */}
+        <Route path="/:username/post/:postId" element={<PostDetail />} />
       </Route>
 
       {/* Guest-only: login rồi tự đá về / */}
