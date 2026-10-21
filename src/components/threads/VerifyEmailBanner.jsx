@@ -35,12 +35,12 @@ const VerifyEmailBanner = () => {
   return (
     <div
       data-testid="verify-email-banner"
-      className="rounded-2xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 space-y-2"
+      className="rounded-2xl mb-2 border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 space-y-2"
     >
       <p className="text-sm text-amber-900 dark:text-amber-200">
         Email của bạn chưa được xác thực. Chúng tôi đã gửi link xác thực tới{" "}
-        <span className="font-semibold break-all">{user?.email}</span> — hãy kiểm
-        tra hộp thư hoặc gửi lại link.
+        <span className="font-semibold break-all">{user?.email}</span> — hãy
+        kiểm tra hộp thư hoặc gửi lại link.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
