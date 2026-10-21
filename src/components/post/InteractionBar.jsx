@@ -3,6 +3,8 @@ import { Link } from "react-router";
 import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
 import useFeedStore from "../../stores/feedStore.js";
 import ReplyModal from "./ReplyModal.jsx";
+import RepostMenu from "./RepostMenu.jsx";
+import ShareMenu from "./ShareMenu.jsx";
 
 function GuestAction({ label, count, testid, icon }) {
   return (
@@ -116,18 +118,27 @@ const InteractionBar = ({ post }) => {
           />
         )}
 
-        <GuestAction
-          label="Repost"
-          count={post.reposts}
-          testid={`repost-${post.id}`}
-          icon={icons.repost}
-        />
-        <GuestAction
-          label="Share"
-          count={post.shares}
-          testid={`share-${post.id}`}
-          icon={icons.share}
-        />
+        {isAuthenticated ? (
+          <RepostMenu post={post} />
+        ) : (
+          <GuestAction
+            label="Repost"
+            count={post.reposts}
+            testid={`repost-${post.id}`}
+            icon={icons.repost}
+          />
+        )}
+
+        {isAuthenticated ? (
+          <ShareMenu post={post} />
+        ) : (
+          <GuestAction
+            label="Share"
+            count={post.shares}
+            testid={`share-${post.id}`}
+            icon={icons.share}
+          />
+        )}
       </div>
 
       <ReplyModal

@@ -11,6 +11,8 @@ export const POSTS_ENDPOINTS = {
   replies: (id) => `/api/posts/${id}/replies`,
   reply: (id) => `/api/posts/${id}/reply`,
   like: (id) => `/api/posts/${id}/like`,
+  repost: (id) => `/api/posts/${id}/repost`,
+  quote: (id) => `/api/posts/${id}/quote`,
   save: (id) => `/api/posts/${id}/save`,
   hide: (id) => `/api/posts/${id}/hide`,
   report: (id) => `/api/posts/${id}/report`,
@@ -104,6 +106,31 @@ export async function toggleLike(id) {
 // POST /api/posts — { content }
 export async function createPost({ content }) {
   const response = await instance.post("/api/posts", { content });
+  const body = response.data ?? {};
+  return mapPost(body.data?.post ?? body.data ?? body);
+}
+
+// POST /api/posts/{id}/repost — toggles. -> { is_reposted, reposts_and_quotes_count }
+export async function repostPost(id) {
+  const response = await instance.post(POSTS_ENDPOINTS.repost(id));
+  const data = response.data?.data ?? {};
+  return {
+    isReposted: Boolean(data.is_reposted),
+    repostsCount: data.reposts_and_quotes_count ?? null,
+  };
+}
+
+// POST /api/posts/{id}/quote — multipart: content + media[] files.
+// Creates a new post with is_quote = true and original_post_id.
+export async function quotePost({ postId, content, files = [] }) {
+  const form = new FormData();
+  form.append("content", content);
+  for (const file of files) {
+    form.append("media[]", file);
+  }
+  const response = await instance.post(POSTS_ENDPOINTS.quote(postId), form, {
+    headers: MULTIPART,
+  });
   const body = response.data ?? {};
   return mapPost(body.data?.post ?? body.data ?? body);
 }

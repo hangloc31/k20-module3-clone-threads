@@ -176,6 +176,29 @@ const useFeedStore = create((set, get) => ({
       ),
     }),
 
+  // Repost toggles on the server, so the counters come from the response.
+  applyRepost: (id, { isReposted, repostsCount } = {}) =>
+    set({
+      posts: get().posts.map((post) =>
+        post.id === id
+          ? {
+              ...post,
+              reposted: Boolean(isReposted),
+              ...(repostsCount === null || repostsCount === undefined
+                ? {}
+                : {
+                    repostsCount,
+                    reposts: formatCount(repostsCount),
+                  }),
+            }
+          : post,
+      ),
+    }),
+
+  // A quoted post is a new post — put it on top of the feed.
+  prependPost: (post) =>
+    set({ posts: [post, ...get().posts] }),
+
   hidePost: (id) =>
     set({ posts: get().posts.filter((post) => post.id !== id) }),
 
