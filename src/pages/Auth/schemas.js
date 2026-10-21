@@ -35,5 +35,31 @@ export const registerSchema = z
     }
   });
 
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, "Vui lòng nhập email")
+    .email("Email không hợp lệ"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, "Mật khẩu phải tối thiểu 8 ký tự"),
+    password_confirmation: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.password_confirmation &&
+      data.password_confirmation !== data.password
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["password_confirmation"],
+        message: "Mật khẩu xác nhận không khớp",
+      });
+    }
+  });
+
 export const USERNAME_DEBOUNCE_MS = 700;
 export const EMAIL_DEBOUNCE_MS = 700;

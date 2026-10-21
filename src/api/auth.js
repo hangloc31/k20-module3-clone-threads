@@ -9,6 +9,10 @@ export const AUTH_ENDPOINTS = {
   user: "/api/auth/user",
   validateUsername: "/api/auth/validate/username",
   validateEmail: "/api/auth/validate/email",
+  verifyEmail: "/api/auth/verify-email",
+  resendVerificationEmail: "/api/auth/resend-verification-email",
+  forgotPassword: "/api/auth/forgot-password",
+  resetPassword: "/api/auth/reset-password",
 };
 
 export async function loginRequest({ login, password }) {
@@ -31,7 +35,8 @@ export async function loginRequest({ login, password }) {
 }
 
 // Register. Payload: { username, email, password, password_confirmation }.
-// Resolves on success (no tokens — account needs email verification).
+// 200 → { data: { user, access_token, refresh_token, expires_in } }.
+// Tokens ARE issued even when the email is not verified yet.
 // Rejects with the axios error so the caller can read response errors.
 export async function registerRequest({
   username,
@@ -45,8 +50,18 @@ export async function registerRequest({
     password,
     password_confirmation,
   });
-  return response.data?.data ?? response.data ?? {};
+  const payload = response.data?.data ?? response.data ?? {};
+  return {
+    user: payload.user ?? null,
+    accessToken: payload.access_token ?? payload.accessToken ?? null,
+    refreshToken: payload.refresh_token ?? payload.refreshToken ?? null,
+    expiresIn: payload.expires_in ?? payload.expiresIn ?? null,
+  };
 }
+
+// Email verification state. NOTE: `user.verified` is the blue check badge,
+// email verification is tracked by `email_verified_at`.
+export const isEmailVerified = (user) => Boolean(user?.email_verified_at);
 
 // Live-check username availability (debounced by caller).
 // 200 + { data: { available: true|false } }; 422 carries field errors.
@@ -68,6 +83,45 @@ export async function validateEmail(email) {
   });
   const data = response.data?.data ?? response.data ?? {};
   return { available: data.available !== false };
+}
+
+// Verify an email address with the token from the verification link.
+// 200 → verified; 400 → { message: "Invalid verification token" };
+// 422 → { errors: { token: [...] } }. Throws so the caller can show a message.
+export async function verifyEmailRequest({ token }) {
+  const response = await instance.post(AUTH_ENDPOINTS.verifyEmail, { token });
+  return response.data?.data ?? response.data ?? {};
+}
+
+// Resend the verification email (requires an access token — the axios
+// interceptor attaches the Bearer header for authenticated users).
+export async function resendVerificationEmailRequest() {
+  const response = await instance.post(AUTH_ENDPOINTS.resendVerificationEmail);
+  return response.data?.data ?? response.data ?? {};
+}
+
+// Request a password reset link. 200 → { message: "Reset link sent to your
+// email" }; 422 → { errors: { email: ["The selected email is invalid."] } }
+// (email not registered). Throws so the caller can react.
+export async function forgotPasswordRequest({ email }) {
+  const response = await instance.post(AUTH_ENDPOINTS.forgotPassword, { email });
+  return response.data?.data ?? response.data ?? {};
+}
+
+// Reset the password with the token from the reset link.
+// Payload: { token, password, password_confirmation }.
+// 400 → { message: "Invalid or expired token" }.
+export async function resetPasswordRequest({
+  token,
+  password,
+  password_confirmation,
+}) {
+  const response = await instance.post(AUTH_ENDPOINTS.resetPassword, {
+    token,
+    password,
+    password_confirmation,
+  });
+  return response.data?.data ?? response.data ?? {};
 }
 
 // Get current user info. Backend envelope: { data: { user } | user | {...} }

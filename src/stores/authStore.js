@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getUserInfo } from "../api/auth.js";
+import { getUserInfo, isEmailVerified } from "../api/auth.js";
 
 const isExpired = (expiresAt) =>
   typeof expiresAt === "number" && Date.now() >= expiresAt;
@@ -73,5 +73,8 @@ export const selectIsAuthenticated = (s) =>
   typeof s.isLoggedIn === "function"
     ? s.isLoggedIn()
     : Boolean(s.accessToken);
+
+// Email verification (not the blue badge — see isEmailVerified in api/auth.js).
+export const selectIsEmailVerified = (s) => isEmailVerified(s.user);
 
 export default useAuthStore;

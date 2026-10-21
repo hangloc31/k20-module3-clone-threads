@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
@@ -112,6 +112,9 @@ const Register = () => {
   });
 
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const login = useAuthStore((state) => state.login);
+  const fetchCurrentUser = useAuthStore((state) => state.fetchCurrentUser);
+  const navigate = useNavigate();
   const usernameValue = watch("username");
   const emailValue = watch("email");
 
@@ -161,12 +164,26 @@ const Register = () => {
     setLoading(true);
     clearErrors("root.server");
     try {
-      await registerRequest({
+      const { user, accessToken, refreshToken, expiresIn } = await registerRequest({
         username: data.username.trim(),
         email: data.email.trim(),
         password: data.password,
         password_confirmation: data.password_confirmation,
       });
+
+      // The backend issues tokens even when the email is not verified yet —
+      // sign the user straight in and let the banner ask for verification.
+      if (accessToken) {
+        login({ user, accessToken, refreshToken, expiresIn });
+        try {
+          await fetchCurrentUser();
+        } catch {
+          // keep the user object from the register response as fallback
+        }
+        navigate("/", { replace: true });
+        return;
+      }
+
       setSuccess(true);
       reset({
         username: data.username,
@@ -224,7 +241,8 @@ const Register = () => {
           className="text-sm rounded-xl bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 px-3 py-2"
         >
           Chúng tôi đã gửi một liên kết xác thực tới email của bạn. Vui lòng
-          kiểm tra email để xác thực tài khoản.
+          kiểm tra email để xác thực tài khoản. Khi mở liên kết, trình duyệt
+          sẽ đưa bạn tới trang xác thực và đăng nhập được ngay sau đó.
         </p>
       )}
 

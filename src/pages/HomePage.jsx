@@ -6,6 +6,7 @@ import LoginBanner from "../components/threads/LoginBanner.jsx";
 import RightLoginPanel from "../components/threads/RightLoginPanel.jsx";
 import RightSuggestPanel from "../components/threads/RightSuggestPanel.jsx";
 import CreateThreadBox from "../components/threads/CreateThreadBox.jsx";
+import VerifyEmailBanner from "../components/threads/VerifyEmailBanner.jsx";
 import ThreadsLogo from "../components/threads/ThreadsLogo.jsx";
 import ThemeToggle from "../components/threads/ThemeToggle.jsx";
 import { Skeleton } from "../components/ui/skeleton.jsx";
@@ -50,6 +51,8 @@ const HomePage = () => {
 
             {/* Feed */}
             <main data-testid="threads-feed" className="pt-3 pb-16">
+              <VerifyEmailBanner />
+
               {isAuthenticated && <CreateThreadBox />}
 
               {loading && posts.length === 0 && (
