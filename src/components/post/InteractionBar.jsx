@@ -1,6 +1,8 @@
+import { useCallback, useState } from "react";
 import { Link } from "react-router";
 import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
 import useFeedStore from "../../stores/feedStore.js";
+import ReplyModal from "./ReplyModal.jsx";
 
 function GuestAction({ label, count, testid, icon }) {
   return (
@@ -71,38 +73,70 @@ const icons = {
 // Like / Comment / Repost / Share with the interaction counters.
 const InteractionBar = ({ post }) => {
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const bumpReplyCount = useFeedStore((s) => s.bumpReplyCount);
+  const handlePosted = useCallback(
+    () => bumpReplyCount(post.id),
+    [bumpReplyCount, post.id],
+  );
 
   return (
-    <div className="flex items-center gap-4 mt-2" data-testid={`actions-${post.id}`}>
-      {isAuthenticated ? (
-        <LikeButton post={post} icon={icons.like} />
-      ) : (
+    <>
+      <div className="flex items-center gap-4 mt-2" data-testid={`actions-${post.id}`}>
+        {isAuthenticated ? (
+          <LikeButton post={post} icon={icons.like} />
+        ) : (
+          <GuestAction
+            label="Like"
+            count={post.likes}
+            testid={`like-${post.id}`}
+            icon={icons.like}
+          />
+        )}
+
+        {isAuthenticated ? (
+          <button
+            type="button"
+            onClick={() => setReplyOpen(true)}
+            aria-label="Comment"
+            data-testid={`comment-${post.id}`}
+            className="flex items-center gap-1 text-[13px] text-neutral-500 hover:text-black dark:hover:text-white"
+          >
+            <span className="p-2 -ml-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800">
+              {icons.comment}
+            </span>
+            {post.replies && <span>{post.replies}</span>}
+          </button>
+        ) : (
+          <GuestAction
+            label="Comment"
+            count={post.replies}
+            testid={`comment-${post.id}`}
+            icon={icons.comment}
+          />
+        )}
+
         <GuestAction
-          label="Like"
-          count={post.likes}
-          testid={`like-${post.id}`}
-          icon={icons.like}
+          label="Repost"
+          count={post.reposts}
+          testid={`repost-${post.id}`}
+          icon={icons.repost}
         />
-      )}
-      <GuestAction
-        label="Comment"
-        count={post.replies}
-        testid={`comment-${post.id}`}
-        icon={icons.comment}
+        <GuestAction
+          label="Share"
+          count={post.shares}
+          testid={`share-${post.id}`}
+          icon={icons.share}
+        />
+      </div>
+
+      <ReplyModal
+        open={replyOpen}
+        post={post}
+        onClose={() => setReplyOpen(false)}
+        onPosted={handlePosted}
       />
-      <GuestAction
-        label="Repost"
-        count={post.reposts}
-        testid={`repost-${post.id}`}
-        icon={icons.repost}
-      />
-      <GuestAction
-        label="Share"
-        count={post.shares}
-        testid={`share-${post.id}`}
-        icon={icons.share}
-      />
-    </div>
+    </>
   );
 };
 

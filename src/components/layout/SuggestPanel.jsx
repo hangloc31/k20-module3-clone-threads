@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import useAuthStore from "../../stores/authStore.js";
-import { fetchSuggestions, followUser, unfollowUser } from "../../api/users.js";
+import { fetchSuggestions, followUser, unfollowUser } from "../../services/postService.js";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar.jsx";
 import { Button } from "../ui/button.jsx";
 

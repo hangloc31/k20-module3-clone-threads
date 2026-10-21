@@ -3,7 +3,7 @@ import {
   createPost as createPostRequest,
   fetchFeed,
   toggleLike as toggleLikeRequest,
-} from "../api/posts.js";
+} from "../services/postService.js";
 import {
   createPostMock,
   fetchFeedMock,
@@ -146,12 +146,48 @@ const useFeedStore = create((set, get) => ({
       const post = await createPostRequest({ content: text });
       set({ posts: [post, ...get().posts] });
       return post;
-    } catch (error) {
+    } catch {
       const post = await createPostMock({ content: text });
       set({ posts: [post, ...get().posts], source: "mock" });
       return post;
     }
   },
+
+  // Post menu actions. The API call happens in the component; the store
+  // only keeps the feed list in sync.
+  savePost: (id, isSaved) =>
+    set({
+      posts: get().posts.map((post) =>
+        post.id === id ? { ...post, saved: Boolean(isSaved) } : post,
+      ),
+    }),
+
+  // Keeps the reply counter in sync after a reply was posted.
+  bumpReplyCount: (id) =>
+    set({
+      posts: get().posts.map((post) =>
+        post.id === id
+          ? {
+              ...post,
+              repliesCount: (post.repliesCount ?? 0) + 1,
+              replies: formatCount((post.repliesCount ?? 0) + 1),
+            }
+          : post,
+      ),
+    }),
+
+  hidePost: (id) =>
+    set({ posts: get().posts.filter((post) => post.id !== id) }),
+
+  deletePost: (id) =>
+    set({ posts: get().posts.filter((post) => post.id !== id) }),
+
+  updatePost: (id, updated) =>
+    set({
+      posts: get().posts.map((post) =>
+        post.id === id ? { ...post, ...updated } : post,
+      ),
+    }),
 
   clearError: () => set({ error: "" }),
 }));

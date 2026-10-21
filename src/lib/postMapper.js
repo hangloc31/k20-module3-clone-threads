@@ -47,6 +47,8 @@ export const mapPost = (post) => {
     reposted: Boolean(post.is_reposted_by_auth),
     isGhost: Boolean(post.is_ghost),
     isQuote: Boolean(post.is_quote),
+    authorMuted: Boolean(user.is_muted_by_auth),
+    authorRestricted: Boolean(user.is_restricted_by_auth),
     originalPost: post.original_post ? mapPost(post.original_post) : null,
     replyPermission: post.reply_permission ?? "everyone",
   };

@@ -1,6 +1,6 @@
 // Offline fallback used when the real API is unreachable.
-// It mirrors the shape of src/api/posts.js so the store does not care which
-// source produced the posts.
+// It mirrors the shape of src/services/postService.js so the store does not
+// care which source produced the posts.
 import { threadsFeed as seedFeed } from "../mocks/threadsFeed.js";
 import { formatCount, parseCount } from "../lib/format.js";
 
