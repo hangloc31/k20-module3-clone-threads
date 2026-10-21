@@ -8,6 +8,7 @@ export const AUTH_ENDPOINTS = {
   refresh: "/api/auth/refresh",
   user: "/api/auth/user",
   validateUsername: "/api/auth/validate/username",
+  validateEmail: "/api/auth/validate/email",
 };
 
 export async function loginRequest({ login, password }) {
@@ -53,6 +54,17 @@ export async function registerRequest({
 export async function validateUsername(username) {
   const response = await instance.post(AUTH_ENDPOINTS.validateUsername, {
     username,
+  });
+  const data = response.data?.data ?? response.data ?? {};
+  return { available: data.available !== false };
+}
+
+// Live-check email availability (debounced by caller).
+// 200 + { data: { available: true|false } }; 422 carries field errors.
+// Returns { available: boolean } on 200, throws otherwise.
+export async function validateEmail(email) {
+  const response = await instance.post(AUTH_ENDPOINTS.validateEmail, {
+    email,
   });
   const data = response.data?.data ?? response.data ?? {};
   return { available: data.available !== false };

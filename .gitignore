@@ -17,6 +17,7 @@ test-results/
 playwright-report/
 playwright/.cache/
 tests/e2e/*.spec.js-snapshots/
+.playwright-mcp/
 
 # Env
 .env

@@ -3,8 +3,17 @@ import { Link, Navigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
-import { registerRequest, validateUsername } from "../../api/auth.js";
-import { registerSchema, USERNAME_DEBOUNCE_MS } from "./schemas.js";
+import {
+  registerRequest,
+  validateUsername,
+  validateEmail,
+} from "../../api/auth.js";
+import {
+  registerSchema,
+  emailSchema,
+  USERNAME_DEBOUNCE_MS,
+  EMAIL_DEBOUNCE_MS,
+} from "./schemas.js";
 
 const inputCls =
   "w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 outline-none";
@@ -12,11 +21,76 @@ const fieldErrorCls = "text-sm text-red-600";
 
 const KNOWN_SERVER_FIELDS = ["username", "email", "password", "password_confirmation"];
 
+const alwaysValid = () => true;
+const isValidEmailFormat = (value) => emailSchema.safeParse(value).success;
+
+// Debounced availability check against a backend validate endpoint.
+// - Empty or malformed values skip the network (zod surfaces those messages).
+// - Stale responses are dropped via a per-field request id.
+// - On failure the field is marked as "taken" so the form cannot be submitted.
+const useAvailabilityCheck = ({
+  value,
+  isValidFormat,
+  check,
+  field,
+  takenMessage,
+  failureMessage,
+  debounceMs,
+  setError,
+  clearErrors,
+}) => {
+  const [checking, setChecking] = useState(false);
+  const checkId = useRef(0);
+
+  useEffect(() => {
+    const current = (value ?? "").trim();
+    if (!current || !isValidFormat(current)) {
+      setChecking(false);
+      return undefined;
+    }
+    setChecking(true);
+    const id = ++checkId.current;
+    const timer = setTimeout(async () => {
+      try {
+        const { available } = await check(current);
+        if (checkId.current !== id) return; // stale response
+        setChecking(false);
+        if (available) {
+          clearErrors(field);
+        } else {
+          setError(field, { type: "taken", message: takenMessage });
+        }
+      } catch (error) {
+        if (checkId.current !== id) return;
+        setChecking(false);
+        setError(field, {
+          type: "taken",
+          message:
+            error.response?.data?.errors?.[field]?.[0] ||
+            error.response?.data?.message ||
+            failureMessage,
+        });
+      }
+    }, debounceMs);
+    return () => clearTimeout(timer);
+  }, [
+    value,
+    isValidFormat,
+    check,
+    field,
+    takenMessage,
+    failureMessage,
+    debounceMs,
+    setError,
+    clearErrors,
+  ]);
+
+  return checking;
+};
+
 const Register = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [checkingUsername, setCheckingUsername] = useState(false);
-  const checkId = useRef(0);
 
   const {
     register,
@@ -39,53 +113,49 @@ const Register = () => {
 
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const usernameValue = watch("username");
+  const emailValue = watch("email");
 
-  // Live-check username availability, debounced. Sync "checking" flag is
-  // set from the watched value render path; the effect only hits network.
-  useEffect(() => {
-    const value = (usernameValue ?? "").trim();
-    if (!value) {
-      setCheckingUsername(false);
-      return undefined;
-    }
-    setCheckingUsername(true);
-    const id = ++checkId.current;
-    const timer = setTimeout(async () => {
-      try {
-        const { available } = await validateUsername(value);
-        if (checkId.current !== id) return; // stale response
-        setCheckingUsername(false);
-        if (available) {
-          clearErrors("username");
-        } else {
-          setError("username", {
-            type: "taken",
-            message: "Tên người dùng đã được sử dụng",
-          });
-        }
-      } catch (error) {
-        if (checkId.current !== id) return;
-        setCheckingUsername(false);
-        setError("username", {
-          type: "taken",
-          message:
-            error.response?.data?.errors?.username?.[0] ||
-            error.response?.data?.message ||
-            "Không kiểm tra được tên người dùng",
-        });
-      }
-    }, USERNAME_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [usernameValue, setError, clearErrors]);
+  // Live-check username availability, debounced.
+  const checkingUsername = useAvailabilityCheck({
+    value: usernameValue,
+    isValidFormat: alwaysValid,
+    check: validateUsername,
+    field: "username",
+    takenMessage: "Tên người dùng đã được sử dụng",
+    failureMessage: "Không kiểm tra được tên người dùng",
+    debounceMs: USERNAME_DEBOUNCE_MS,
+    setError,
+    clearErrors,
+  });
+
+  // Live-check email availability, debounced. Malformed emails are skipped
+  // so the server is not hit with invalid input — zod reports the format.
+  const checkingEmail = useAvailabilityCheck({
+    value: emailValue,
+    isValidFormat: isValidEmailFormat,
+    check: validateEmail,
+    field: "email",
+    takenMessage: "Email đã được sử dụng",
+    failureMessage: "Không kiểm tra được email",
+    debounceMs: EMAIL_DEBOUNCE_MS,
+    setError,
+    clearErrors,
+  });
 
   // nếu đã login mà cố vào /register thì đá luôn (đặt sau mọi hook)
   if (isAuthenticated) return <Navigate to="/" replace />;
 
   const usernameError = errors.username;
+  const emailError = errors.email;
 
   const serverError = errors.root?.server?.message;
   const canSubmit =
-    isValid && !checkingUsername && usernameError?.type !== "taken" && !loading;
+    isValid &&
+    !checkingUsername &&
+    !checkingEmail &&
+    usernameError?.type !== "taken" &&
+    emailError?.type !== "taken" &&
+    !loading;
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -199,8 +269,18 @@ const Register = () => {
           className={inputCls}
           {...register("email")}
         />
-        {errors.email && (
-          <p className={`${fieldErrorCls} mt-1`}>{errors.email.message}</p>
+        {checkingEmail && (
+          <p data-testid="email-status" className="text-sm text-neutral-500 mt-1">
+            Đang kiểm tra email...
+          </p>
+        )}
+        {!checkingEmail && emailError && (
+          <p
+            data-testid={emailError.type === "taken" ? "email-status" : undefined}
+            className={`${fieldErrorCls} mt-1`}
+          >
+            {emailError.message}
+          </p>
         )}
       </div>
 
