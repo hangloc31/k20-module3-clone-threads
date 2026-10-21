@@ -9,6 +9,8 @@ export const AUTH_ENDPOINTS = {
   user: "/api/auth/user",
   validateUsername: "/api/auth/validate/username",
   validateEmail: "/api/auth/validate/email",
+  verifyEmail: "/api/auth/verify-email",
+  resendVerificationEmail: "/api/auth/resend-verification-email",
 };
 
 export async function loginRequest({ login, password }) {
@@ -68,6 +70,21 @@ export async function validateEmail(email) {
   });
   const data = response.data?.data ?? response.data ?? {};
   return { available: data.available !== false };
+}
+
+// Verify an email address with the token from the verification link.
+// 200 → verified; 400 → { message: "Invalid verification token" };
+// 422 → { errors: { token: [...] } }. Throws so the caller can show a message.
+export async function verifyEmailRequest({ token }) {
+  const response = await instance.post(AUTH_ENDPOINTS.verifyEmail, { token });
+  return response.data?.data ?? response.data ?? {};
+}
+
+// Resend the verification email (requires an access token — the axios
+// interceptor attaches the Bearer header for authenticated users).
+export async function resendVerificationEmailRequest() {
+  const response = await instance.post(AUTH_ENDPOINTS.resendVerificationEmail);
+  return response.data?.data ?? response.data ?? {};
 }
 
 // Get current user info. Backend envelope: { data: { user } | user | {...} }

@@ -224,7 +224,8 @@ const Register = () => {
           className="text-sm rounded-xl bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 px-3 py-2"
         >
           Chúng tôi đã gửi một liên kết xác thực tới email của bạn. Vui lòng
-          kiểm tra email để xác thực tài khoản.
+          kiểm tra email để xác thực tài khoản. Khi mở liên kết, trình duyệt
+          sẽ đưa bạn tới trang xác thực và đăng nhập được ngay sau đó.
         </p>
       )}
 
