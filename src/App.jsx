@@ -1,10 +1,15 @@
 import { Route, Routes, Navigate } from "react-router";
-import Home from "./pages/HomePage";
+import Home from "./pages/Home";
+import Create from "./pages/Create";
+import Search from "./pages/Search";
+import Activity from "./pages/Activity";
+import Profile from "./pages/Profile";
 import Login from "./pages/Auth/Login";
 import Register from "./pages/Auth/Register";
 import VerifyEmail from "./pages/Auth/VerifyEmail";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import ResetPassword from "./pages/Auth/ResetPassword";
+import DefaultLayout from "./layouts/DefaultLayout";
 import AuthLayout from "./layouts/AuthLayout";
 import NotFound from "./pages/NotFound";
 
@@ -13,8 +18,14 @@ import { GuestRoute } from "./components/ProtectedRoute";
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/home" element={<Navigate to="/" replace />} />
+      {/* Main app shell: sidebar + feed + login panel */}
+      <Route element={<DefaultLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/create" element={<Create />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/activity" element={<Activity />} />
+        <Route path="/profile" element={<Profile />} />
+      </Route>
 
       {/* Guest-only: login rồi tự đá về / */}
       <Route
