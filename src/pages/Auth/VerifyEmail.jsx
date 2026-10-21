@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { verifyEmailRequest } from "../../api/auth.js";
+import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
 
 // Backend messages are English — map the known ones to Vietnamese.
 const FRIENDLY_MESSAGES = {
@@ -25,6 +26,13 @@ const VerifyEmail = () => {
   // StrictMode runs effects twice in dev — the ref guard keeps the API to a
   // single call per token (the first effect run owns the request).
   const requestedToken = useRef(null);
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const fetchCurrentUser = useAuthStore((s) => s.fetchCurrentUser);
+  // Keep the latest auth state without re-triggering the verification call.
+  const isAuthedRef = useRef(isAuthenticated);
+  useEffect(() => {
+    isAuthedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!token) {
@@ -39,8 +47,17 @@ const VerifyEmail = () => {
     setMessage("");
 
     verifyEmailRequest({ token })
-      .then(() => {
+      .then(async () => {
         setStatus("success");
+        // Signed-in users: refresh the profile so the "unverified" banner
+        // disappears right away.
+        if (isAuthedRef.current) {
+          try {
+            await fetchCurrentUser();
+          } catch {
+            // non-fatal — the verification itself succeeded
+          }
+        }
       })
       .catch((error) => {
         setStatus("error");
@@ -54,7 +71,7 @@ const VerifyEmail = () => {
       });
 
     return undefined;
-  }, [token]);
+  }, [token, fetchCurrentUser]);
 
   return (
     <div className={cardCls}>

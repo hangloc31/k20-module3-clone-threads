@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
@@ -112,6 +112,9 @@ const Register = () => {
   });
 
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const login = useAuthStore((state) => state.login);
+  const fetchCurrentUser = useAuthStore((state) => state.fetchCurrentUser);
+  const navigate = useNavigate();
   const usernameValue = watch("username");
   const emailValue = watch("email");
 
@@ -161,12 +164,26 @@ const Register = () => {
     setLoading(true);
     clearErrors("root.server");
     try {
-      await registerRequest({
+      const { user, accessToken, refreshToken, expiresIn } = await registerRequest({
         username: data.username.trim(),
         email: data.email.trim(),
         password: data.password,
         password_confirmation: data.password_confirmation,
       });
+
+      // The backend issues tokens even when the email is not verified yet —
+      // sign the user straight in and let the banner ask for verification.
+      if (accessToken) {
+        login({ user, accessToken, refreshToken, expiresIn });
+        try {
+          await fetchCurrentUser();
+        } catch {
+          // keep the user object from the register response as fallback
+        }
+        navigate("/", { replace: true });
+        return;
+      }
+
       setSuccess(true);
       reset({
         username: data.username,

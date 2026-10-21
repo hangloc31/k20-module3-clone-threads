@@ -139,6 +139,80 @@ test.describe("register page", () => {
     await expect(page.getByText("Email đã được sử dụng.")).toBeVisible();
   });
 
+  test("signs the user in and lands on the feed when tokens are returned", async ({
+    page,
+  }) => {
+    await mockUsername(page);
+    await mockEmail(page);
+    await page.route("**/api/auth/register", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          message: "User registered successfully. Please verify your email.",
+          data: {
+            user: {
+              id: 999,
+              name: "freshuser5",
+              username: "freshuser5",
+              email: "fresh5@x.com",
+              verified: false,
+            },
+            access_token: "access-token-abc",
+            refresh_token: "refresh-token-abc",
+            expires_in: 3600,
+          },
+        }),
+      }),
+    );
+    await page.route("**/api/auth/user", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            id: 999,
+            name: "freshuser5",
+            username: "freshuser5",
+            email: "fresh5@x.com",
+            email_verified_at: null,
+          },
+        }),
+      }),
+    );
+
+    await fillForm(page, {
+      username: "freshuser5",
+      email: "fresh5@x.com",
+    });
+    await page.getByRole("button", { name: "Đăng ký" }).click();
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByTestId("verify-email-banner")).toBeVisible();
+    await expect(page.getByTestId("verify-email-banner")).toContainText(
+      "fresh5@x.com",
+    );
+  });
+
+  test("keeps the success message when the backend returns no tokens", async ({
+    page,
+  }) => {
+    await mockUsername(page);
+    await mockEmail(page);
+    await page.route("**/api/auth/register", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: {} }),
+      }),
+    );
+    await fillForm(page, { username: "freshuser6", email: "fresh6@x.com" });
+    await page.getByRole("button", { name: "Đăng ký" }).click();
+    await expect(page.getByTestId("register-success")).toBeVisible();
+  });
+
   test("bottom link goes to login", async ({ page }) => {
     const link = page.getByRole("link", { name: "Đăng nhập" });
     await expect(link).toBeVisible();
