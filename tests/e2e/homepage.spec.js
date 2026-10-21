@@ -1,9 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { makeApiFeed, mockFeed } from "./helpers/feedFixture.js";
 
-// Structural clone-accuracy checks for threads.com logged-out homepage
-// (Vietnamese dark UI per provided screenshot).
-test.describe("Threads logged-out homepage", () => {
+// Structural clone-accuracy checks for the Threads layout (sidebar, right
+// column, mobile tab bar) plus the feed rendering.
+test.describe("Threads homepage", () => {
   test.beforeEach(async ({ page }) => {
+    await mockFeed(page, { 1: makeApiFeed(3) });
     await page.goto("/");
     await expect(page.getByTestId("threads-home")).toBeVisible();
   });
@@ -15,7 +17,15 @@ test.describe("Threads logged-out homepage", () => {
     const nav = page.getByTestId("threads-sidebar");
     await expect(nav).toBeVisible();
     await expect(nav.getByRole("img", { name: "Threads" })).toBeVisible();
-    for (const key of ["home", "create", "search", "messages", "activity", "profile", "insights"]) {
+    for (const key of [
+      "home",
+      "create",
+      "search",
+      "messages",
+      "activity",
+      "profile",
+      "insights",
+    ]) {
       await expect(page.getByTestId(`nav-${key}`)).toBeVisible();
     }
     await expect(page.getByTestId("nav-home")).toContainText("Trang chủ");
@@ -30,24 +40,34 @@ test.describe("Threads logged-out homepage", () => {
     await expect(page.getByTestId("threads-tabbar")).toBeVisible();
   });
 
-  test("feed renders screenshot post first with hashtags and video", async ({ page }) => {
+  test("feed renders posts from the API payload", async ({ page }) => {
     const feed = page.getByTestId("threads-feed");
     await expect(feed).toBeVisible();
-    await expect(feed.locator(":scope > article")).toHaveCount(7);
+    await expect(feed.locator(":scope > article")).toHaveCount(3);
 
-    const first = page.getByTestId("thread-p0");
-    await expect(first).toContainText("t_nakats_");
-    await expect(first).toContainText("17 giờ");
-    await expect(first).toContainText("#大谷翔平");
-    await expect(first.getByTestId("translate-p0")).toContainText("Dịch");
-    await expect(first.getByTestId("mute-p0")).toBeVisible();
-    await expect(first.getByTestId("like-p0")).toContainText("3.2K");
-
-    await expect(page.getByTestId("thread-p1")).toContainText("12 giờ");
-    await expect(page.getByTestId("thread-p4")).toContainText("abcnews");
+    const first = page.getByTestId("post-1");
+    await expect(first).toContainText("nguyenvana");
+    await expect(first).toContainText("Bài viết số 1");
+    await expect(first).toContainText("2 giờ");
+    await expect(page.getByTestId("like-1")).toContainText("1.2K");
+    await expect(page.getByTestId("comment-1")).toContainText("34");
+    await expect(page.getByTestId("repost-1")).toContainText("5");
   });
 
-  test("right login panel mirrors screenshot with normal login button", async ({ page }) => {
+  test("post card shows hashtags and the translate link", async ({ page }) => {
+    await mockFeed(page, {
+      1: makeApiFeed(1, { content: "Xin chào #k20 #f8team" }),
+    });
+    await page.reload();
+    const first = page.getByTestId("post-1");
+    await expect(first).toContainText("#k20");
+    await expect(first).toContainText("#f8team");
+    await expect(page.getByTestId("translate-1")).toContainText("Dịch");
+  });
+
+  test("right login panel mirrors screenshot with normal login button", async ({
+    page,
+  }) => {
     if (!(await page.getByTestId("threads-login-panel").isVisible())) {
       test.skip(true, "right panel is desktop-only");
     }

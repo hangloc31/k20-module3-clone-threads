@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
-import ThreadsLogo from "./ThreadsLogo.jsx";
-import ThemeToggle from "./ThemeToggle.jsx";
+import ThreadsLogo from "../threads/ThreadsLogo.jsx";
+import ThemeToggle from "../threads/ThemeToggle.jsx";
 
 const iconCls = "w-6 h-6";
 
@@ -62,15 +62,17 @@ const Icons = {
 // Tin nhắn, Hoạt động, Trang cá nhân, Thông tin chi tiết.
 const items = [
   { key: "home", label: "Trang chủ", to: "/", icon: Icons.homeOutline, activeIcon: Icons.home },
-  { key: "create", label: "Thread mới", to: "/login", icon: Icons.create },
+  { key: "create", label: "Thread mới", to: "/create", icon: Icons.create },
   { key: "search", label: "Tìm kiếm", to: "/search", icon: Icons.search },
   { key: "messages", label: "Tin nhắn", to: "/login", icon: Icons.messages },
-  { key: "activity", label: "Hoạt động", to: "/login", icon: Icons.activity },
-  { key: "profile", label: "Trang cá nhân", to: "/login", icon: Icons.profile },
+  { key: "activity", label: "Hoạt động", to: "/activity", icon: Icons.activity },
+  { key: "profile", label: "Trang cá nhân", to: "/profile", icon: Icons.profile },
   { key: "insights", label: "Thông tin chi tiết", to: "/login", icon: Icons.insights },
 ];
 
-export default function LeftNav() {
+// Three variants of the same navigation, mirroring the Threads layout:
+// full sidebar on desktop, icon rail on tablet, bottom tab bar on mobile.
+export default function Sidebar() {
   const { pathname } = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
 
