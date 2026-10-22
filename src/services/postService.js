@@ -11,10 +11,15 @@ export const POSTS_ENDPOINTS = {
   replies: (id) => `/api/posts/${id}/replies`,
   reply: (id) => `/api/posts/${id}/reply`,
   like: (id) => `/api/posts/${id}/like`,
+  repost: (id) => `/api/posts/${id}/repost`,
+  quote: (id) => `/api/posts/${id}/quote`,
   save: (id) => `/api/posts/${id}/save`,
   hide: (id) => `/api/posts/${id}/hide`,
   report: (id) => `/api/posts/${id}/report`,
   userAction: (id, action) => `/api/users/${id}/${action}`,
+  userReposts: (id) => `/api/users/${id}/reposts`,
+  userFollowers: (id) => `/api/users/${id}/followers`,
+  userFollowings: (id) => `/api/users/${id}/followings`,
 };
 
 // The shared axios instance defaults to JSON. Multipart requests must
@@ -108,6 +113,31 @@ export async function createPost({ content }) {
   return mapPost(body.data?.post ?? body.data ?? body);
 }
 
+// POST /api/posts/{id}/repost — toggles. -> { is_reposted, reposts_and_quotes_count }
+export async function repostPost(id) {
+  const response = await instance.post(POSTS_ENDPOINTS.repost(id));
+  const data = response.data?.data ?? {};
+  return {
+    isReposted: Boolean(data.is_reposted),
+    repostsCount: data.reposts_and_quotes_count ?? null,
+  };
+}
+
+// POST /api/posts/{id}/quote — multipart: content + media[] files.
+// Creates a new post with is_quote = true and original_post_id.
+export async function quotePost({ postId, content, files = [] }) {
+  const form = new FormData();
+  form.append("content", content);
+  for (const file of files) {
+    form.append("media[]", file);
+  }
+  const response = await instance.post(POSTS_ENDPOINTS.quote(postId), form, {
+    headers: MULTIPART,
+  });
+  const body = response.data ?? {};
+  return mapPost(body.data?.post ?? body.data ?? body);
+}
+
 // POST /api/posts/{id}/save — toggles. -> { is_saved }
 export async function savePost(id) {
   const response = await instance.post(POSTS_ENDPOINTS.save(id));
@@ -178,6 +208,30 @@ export async function fetchSuggestions() {
     followersCount: user.followers_count ?? 0,
     isFollowing: Boolean(user.is_following),
   }));
+}
+
+// GET /api/users/{id}/reposts -> posts the user has reposted
+export async function fetchUserReposts(id, { page = 1, perPage = 20 } = {}) {
+  const response = await instance.get(POSTS_ENDPOINTS.userReposts(id), {
+    params: { page, per_page: perPage },
+  });
+  const body = response.data ?? {};
+  const items = Array.isArray(body.data) ? body.data : [];
+  return {
+    posts: mapPosts(items),
+    pagination: body.pagination ?? null,
+  };
+}
+
+// Counts of followers / followings (the list endpoints expose pagination.total).
+export async function fetchFollowersCount(id) {
+  const response = await instance.get(POSTS_ENDPOINTS.userFollowers(id));
+  return response.data?.pagination?.total ?? 0;
+}
+
+export async function fetchFollowingsCount(id) {
+  const response = await instance.get(POSTS_ENDPOINTS.userFollowings(id));
+  return response.data?.pagination?.total ?? 0;
 }
 
 // POST /api/users/{id}/follow — follow only (it does NOT toggle).

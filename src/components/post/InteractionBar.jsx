@@ -3,6 +3,8 @@ import { Link } from "react-router";
 import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
 import useFeedStore from "../../stores/feedStore.js";
 import ReplyModal from "./ReplyModal.jsx";
+import RepostMenu from "./RepostMenu.jsx";
+import ShareMenu from "./ShareMenu.jsx";
 
 function GuestAction({ label, count, testid, icon }) {
   return (
@@ -25,7 +27,10 @@ function LikeButton({ post, icon }) {
   return (
     <button
       type="button"
-      onClick={() => like(post.id)}
+      onClick={(event) => {
+        event.stopPropagation();
+        like(post.id);
+      }}
       aria-label={post.liked ? "Unlike" : "Like"}
       aria-pressed={Boolean(post.liked)}
       data-testid={`like-${post.id}`}
@@ -97,7 +102,10 @@ const InteractionBar = ({ post }) => {
         {isAuthenticated ? (
           <button
             type="button"
-            onClick={() => setReplyOpen(true)}
+            onClick={(event) => {
+              event.stopPropagation();
+              setReplyOpen(true);
+            }}
             aria-label="Comment"
             data-testid={`comment-${post.id}`}
             className="flex items-center gap-1 text-[13px] text-neutral-500 hover:text-black dark:hover:text-white"
@@ -116,18 +124,27 @@ const InteractionBar = ({ post }) => {
           />
         )}
 
-        <GuestAction
-          label="Repost"
-          count={post.reposts}
-          testid={`repost-${post.id}`}
-          icon={icons.repost}
-        />
-        <GuestAction
-          label="Share"
-          count={post.shares}
-          testid={`share-${post.id}`}
-          icon={icons.share}
-        />
+        {isAuthenticated ? (
+          <RepostMenu post={post} />
+        ) : (
+          <GuestAction
+            label="Repost"
+            count={post.reposts}
+            testid={`repost-${post.id}`}
+            icon={icons.repost}
+          />
+        )}
+
+        {isAuthenticated ? (
+          <ShareMenu post={post} />
+        ) : (
+          <GuestAction
+            label="Share"
+            count={post.shares}
+            testid={`share-${post.id}`}
+            icon={icons.share}
+          />
+        )}
       </div>
 
       <ReplyModal

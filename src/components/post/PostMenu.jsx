@@ -135,6 +135,7 @@ const PostMenu = ({ post }) => {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
+            onClick={(event) => event.stopPropagation()}
             aria-label="More options"
             data-testid={`post-menu-${post.id}`}
             className="text-neutral-500 hover:text-black dark:hover:text-white px-2 tracking-widest"
@@ -144,6 +145,7 @@ const PostMenu = ({ post }) => {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">
+          onClick={(event) => event.stopPropagation()}
           <DropdownMenuItem
             className={itemCls}
             data-testid={`menu-save-${post.id}`}

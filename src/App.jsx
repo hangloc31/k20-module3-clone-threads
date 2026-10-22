@@ -5,12 +5,14 @@ import Search from "./pages/Search";
 import Activity from "./pages/Activity";
 import Profile from "./pages/Profile";
 import PostDetail from "./pages/PostDetail";
+import Embed from "./pages/Embed";
 import Login from "./pages/Auth/Login";
 import Register from "./pages/Auth/Register";
 import VerifyEmail from "./pages/Auth/VerifyEmail";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import ResetPassword from "./pages/Auth/ResetPassword";
 import DefaultLayout from "./layouts/DefaultLayout";
+import EmbedLayout from "./layouts/EmbedLayout";
 import AuthLayout from "./layouts/AuthLayout";
 import NotFound from "./pages/NotFound";
 
@@ -40,6 +42,11 @@ function App() {
       >
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+      </Route>
+
+      {/* Embeddable post: /:username/post/:postId/embed (no sidebar/footer) */}
+      <Route element={<EmbedLayout />}>
+        <Route path="/:username/post/:postId/embed" element={<Embed />} />
       </Route>
 
       {/* Verify email / reset password: outside GuestRoute so signed-in
