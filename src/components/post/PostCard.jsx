@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import InteractionBar from "./InteractionBar.jsx";
 import PostMenu from "./PostMenu.jsx";
 import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
@@ -32,14 +32,36 @@ function VerifiedBadge() {
 const PostCard = ({ post }) => {
   const [muted, setMuted] = useState(true);
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const navigate = useNavigate();
+  const detailUrl = `/${post.username}/post/${post.id}`;
+
+  // Menus and dialogs render in portals, so their clicks still bubble
+  // through the React tree — ignore them for the card navigation.
+  const handleCardClick = (event) => {
+    const target = event.target;
+    if (
+      target?.closest?.(
+        "[role='menu'], [role='dialog'], [data-radix-popper-content-wrapper]",
+      )
+    ) {
+      return;
+    }
+    navigate(detailUrl);
+  };
 
   return (
     <article
       data-testid={`post-${post.id}`}
-      className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1b1b1b] px-4 sm:px-5 py-4 mb-4"
+      onClick={handleCardClick}
+      className="cursor-pointer rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1b1b1b] px-4 sm:px-5 py-4 mb-4"
     >
       <div className="flex items-center gap-3">
-        <Link to="/login" aria-label={`${post.username} profile`} className="shrink-0">
+        <Link
+          to="/login"
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`${post.username} profile`}
+          className="shrink-0"
+        >
           <img
             src={post.avatar}
             alt={`${post.username}'s profile picture`}
@@ -50,11 +72,19 @@ const PostCard = ({ post }) => {
           />
         </Link>
         <div className="flex items-baseline gap-1.5 text-[15px] min-w-0">
-          <Link to="/login" className="font-semibold hover:underline truncate">
+          <Link
+            to="/login"
+            onClick={(event) => event.stopPropagation()}
+            className="font-semibold hover:underline truncate"
+          >
             {post.username}
           </Link>
           {post.verified && <VerifiedBadge />}
-          <Link to="/login" className="text-neutral-500 font-normal hover:underline shrink-0">
+          <Link
+            to="/login"
+            onClick={(event) => event.stopPropagation()}
+            className="text-neutral-500 font-normal hover:underline shrink-0"
+          >
             {post.time}
           </Link>
         </div>
@@ -64,6 +94,7 @@ const PostCard = ({ post }) => {
         ) : (
           <Link
             to="/login"
+            onClick={(event) => event.stopPropagation()}
             aria-label="More options"
             className="text-neutral-500 hover:text-black dark:hover:text-white px-2 tracking-widest"
           >
@@ -85,12 +116,18 @@ const PostCard = ({ post }) => {
         {post.hashtags.length > 0 && (
           <p className="mt-1 text-[15px] leading-6 break-words">
             {post.hashtags.map((tag) => (
-              <Link key={tag} to="/login" className="hover:underline mr-1">
+              <Link
+                key={tag}
+                to="/login"
+                onClick={(event) => event.stopPropagation()}
+                className="hover:underline mr-1"
+              >
                 {tag}
               </Link>
             ))}{" "}
             <Link
               to="/login"
+              onClick={(event) => event.stopPropagation()}
               data-testid={`translate-${post.id}`}
               className="text-neutral-500 hover:underline"
             >
@@ -116,7 +153,10 @@ const PostCard = ({ post }) => {
             {post.video && (
               <button
                 type="button"
-                onClick={() => setMuted((m) => !m)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMuted((m) => !m);
+                }}
                 aria-label={muted ? "Bật tiếng" : "Tắt tiếng"}
                 aria-pressed={muted}
                 data-testid={`mute-${post.id}`}

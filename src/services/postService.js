@@ -17,6 +17,9 @@ export const POSTS_ENDPOINTS = {
   hide: (id) => `/api/posts/${id}/hide`,
   report: (id) => `/api/posts/${id}/report`,
   userAction: (id, action) => `/api/users/${id}/${action}`,
+  userReposts: (id) => `/api/users/${id}/reposts`,
+  userFollowers: (id) => `/api/users/${id}/followers`,
+  userFollowings: (id) => `/api/users/${id}/followings`,
 };
 
 // The shared axios instance defaults to JSON. Multipart requests must
@@ -205,6 +208,30 @@ export async function fetchSuggestions() {
     followersCount: user.followers_count ?? 0,
     isFollowing: Boolean(user.is_following),
   }));
+}
+
+// GET /api/users/{id}/reposts -> posts the user has reposted
+export async function fetchUserReposts(id, { page = 1, perPage = 20 } = {}) {
+  const response = await instance.get(POSTS_ENDPOINTS.userReposts(id), {
+    params: { page, per_page: perPage },
+  });
+  const body = response.data ?? {};
+  const items = Array.isArray(body.data) ? body.data : [];
+  return {
+    posts: mapPosts(items),
+    pagination: body.pagination ?? null,
+  };
+}
+
+// Counts of followers / followings (the list endpoints expose pagination.total).
+export async function fetchFollowersCount(id) {
+  const response = await instance.get(POSTS_ENDPOINTS.userFollowers(id));
+  return response.data?.pagination?.total ?? 0;
+}
+
+export async function fetchFollowingsCount(id) {
+  const response = await instance.get(POSTS_ENDPOINTS.userFollowings(id));
+  return response.data?.pagination?.total ?? 0;
 }
 
 // POST /api/users/{id}/follow — follow only (it does NOT toggle).

@@ -22,6 +22,7 @@ const ShareMenu = ({ post }) => {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
+            onClick={(event) => event.stopPropagation()}
             aria-label="Share"
             data-testid={`share-${post.id}`}
             className="flex items-center gap-1 text-[13px] text-neutral-500 hover:text-black dark:hover:text-white"
@@ -45,6 +46,7 @@ const ShareMenu = ({ post }) => {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="start" className="w-48">
+          onClick={(event) => event.stopPropagation()}
           <DropdownMenuItem
             className={itemCls}
             data-testid={`menu-copy-image-${post.id}`}

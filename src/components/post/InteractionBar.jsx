@@ -27,7 +27,10 @@ function LikeButton({ post, icon }) {
   return (
     <button
       type="button"
-      onClick={() => like(post.id)}
+      onClick={(event) => {
+        event.stopPropagation();
+        like(post.id);
+      }}
       aria-label={post.liked ? "Unlike" : "Like"}
       aria-pressed={Boolean(post.liked)}
       data-testid={`like-${post.id}`}
@@ -99,7 +102,10 @@ const InteractionBar = ({ post }) => {
         {isAuthenticated ? (
           <button
             type="button"
-            onClick={() => setReplyOpen(true)}
+            onClick={(event) => {
+              event.stopPropagation();
+              setReplyOpen(true);
+            }}
             aria-label="Comment"
             data-testid={`comment-${post.id}`}
             className="flex items-center gap-1 text-[13px] text-neutral-500 hover:text-black dark:hover:text-white"

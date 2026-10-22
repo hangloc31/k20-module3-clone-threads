@@ -35,6 +35,7 @@ const RepostMenu = ({ post }) => {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
+            onClick={(event) => event.stopPropagation()}
             aria-label="Repost"
             data-testid={`repost-${post.id}`}
             className={`flex items-center gap-1 text-[13px] ${
@@ -63,6 +64,7 @@ const RepostMenu = ({ post }) => {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="start" className="w-48">
+          onClick={(event) => event.stopPropagation()}
           <DropdownMenuItem
             className={itemCls}
             data-testid={`menu-repost-${post.id}`}

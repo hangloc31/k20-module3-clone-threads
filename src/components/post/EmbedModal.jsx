@@ -28,7 +28,10 @@ const EmbedModal = ({ open, post, onClose }) => {
       aria-modal="true"
       data-testid="embed-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-      onClick={onClose}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClose?.();
+      }}
     >
       <div
         className="w-full max-w-lg rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1b1b1b] p-5 space-y-4 max-h-[90vh] overflow-y-auto"

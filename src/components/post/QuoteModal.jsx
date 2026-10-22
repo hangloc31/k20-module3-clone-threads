@@ -106,7 +106,10 @@ const QuoteModal = ({ open, post, onClose }) => {
       aria-modal="true"
       data-testid="quote-modal"
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4"
-      onClick={onClose}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClose?.();
+      }}
     >
       <div
         className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1b1b1b] p-5 space-y-4"
