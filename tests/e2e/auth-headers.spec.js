@@ -96,12 +96,14 @@ test.describe("auth request headers", () => {
     );
 
     await page.goto("/login");
+    // register the waiter before the action, otherwise the request may
+    // already be gone when we start waiting
+    const userRequest = page.waitForRequest("**/api/auth/user");
     await page.getByPlaceholder("Username hoặc Email").fill("mockuser");
     await page.getByPlaceholder("Mật khẩu").fill("secret123");
     await page.getByRole("button", { name: "Đăng nhập" }).click();
 
-    const userRequest = await page.waitForRequest("**/api/auth/user");
-    expect(userRequest.headers().authorization).toBe("Bearer mock-access");
+    expect((await userRequest).headers().authorization).toBe("Bearer mock-access");
   });
 
   test("resend verification carries the Bearer token", async ({ page }) => {

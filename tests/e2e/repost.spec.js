@@ -49,8 +49,11 @@ test.describe("repost and quote", () => {
     await page.getByTestId("repost-1").click();
     await page.getByTestId("menu-repost-1").click();
     await expect(page.getByText("Đã repost")).toBeVisible();
+    // the dropdown stays in the DOM while it animates out
+    await expect(page.locator("[role=menu]")).toHaveCount(0);
 
     await page.getByTestId("repost-1").click();
+    await expect(page.getByTestId("menu-repost-1")).toBeVisible();
     await page.getByTestId("menu-repost-1").click();
     await expect(page.getByText("Đã bỏ repost")).toBeVisible();
     await expect(page.getByTestId("repost-1")).not.toHaveClass(/text-emerald-600/);

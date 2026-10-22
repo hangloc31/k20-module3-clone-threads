@@ -116,6 +116,56 @@ test.describe("post detail page", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
+  test("the back button returns to the feed", async ({ page }) => {
+    await page.route("**/api/posts/1", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: post() }),
+      }),
+    );
+    await page.route("**/api/posts/1/replies**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [], pagination: {} }),
+      }),
+    );
+
+    await page.goto("/");
+    await page.getByTestId("post-1").click();
+    await expect(page).toHaveURL(/\/nguyenvana\/post\/1$/);
+
+    const back = page.getByTestId("post-detail-back");
+    await expect(back).toHaveAttribute("aria-label", "Quay lại feed");
+    await back.click();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test("the back button falls back to the feed without history", async ({
+    page,
+  }) => {
+    await page.route("**/api/posts/1", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: post() }),
+      }),
+    );
+    await page.route("**/api/posts/1/replies**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [], pagination: {} }),
+      }),
+    );
+
+    // Opened directly — no previous page to go back to.
+    await page.goto("/nguyenvana/post/1");
+    await page.getByTestId("post-detail-back").click();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
   test("shows an error for a missing post", async ({ page }) => {
     await page.route("**/api/posts/999", (route) =>
       route.fulfill({

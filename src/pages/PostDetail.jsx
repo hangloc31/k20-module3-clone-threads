@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import PostCard from "../components/post/PostCard.jsx";
 import CommentList from "../components/post/CommentList.jsx";
@@ -12,6 +12,7 @@ import { createReply, fetchPost } from "../services/postService.js";
 // The post on top, its comments below and an inline reply box (Threads style).
 const PostDetail = () => {
   const { postId } = useParams();
+  const navigate = useNavigate();
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const user = useAuthStore((s) => s.user);
 
@@ -78,8 +79,37 @@ const PostDetail = () => {
     }
   };
 
+  // Go back to the previous page when there is one, otherwise to the feed.
+  const handleBack = () => {
+    const idx = window.history.state?.idx;
+    if (typeof idx === "number" && idx > 0) {
+      navigate(-1);
+      return;
+    }
+    navigate("/");
+  };
+
   return (
     <div className="pt-3" data-testid="post-detail-page">
+      <button
+        type="button"
+        onClick={handleBack}
+        aria-label="Quay lại feed"
+        data-testid="post-detail-back"
+        className="mb-2 flex h-9 w-9 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-black dark:hover:text-white"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="w-5 h-5"
+          aria-hidden="true"
+        >
+          <path d="M15 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
       {loading && (
         <p
           className="text-sm text-neutral-500 px-2"
