@@ -98,6 +98,36 @@ test.describe("post detail page", () => {
     expect(payload).toContain("Trả lời của tôi");
   });
 
+  test("inserts an emoji into the inline reply", async ({ page }) => {
+    await seedAuth(page, { accessToken: "seeded-access-token" });
+    await page.route("**/api/posts/1", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: post() }),
+      }),
+    );
+    await page.route("**/api/posts/1/replies**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [], pagination: {} }),
+      }),
+    );
+
+    await page.goto("/nguyenvana/post/1");
+    const input = page.getByTestId("post-detail-reply-input");
+    await input.fill("Cảm ơn");
+
+    await page.getByTestId("post-detail-emoji").click();
+    await expect(page.getByTestId("emoji-picker")).toBeVisible();
+    await page.locator("[data-testid=emoji-picker] button").first().click();
+
+    await expect(input).toHaveValue(/^Cảm ơn\p{Extended_Pictographic}/u);
+    await expect(page.getByTestId("emoji-picker")).toHaveCount(0);
+    await expect(page.getByTestId("post-detail-reply-submit")).toBeEnabled();
+  });
+
   test("the like button does not navigate away", async ({ page }) => {
     await seedAuth(page, { accessToken: "seeded-access-token" });
     await page.route("**/api/posts/1/like", (route) =>

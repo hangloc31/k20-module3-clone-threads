@@ -3,10 +3,12 @@ import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import PostCard from "../components/post/PostCard.jsx";
 import CommentList from "../components/post/CommentList.jsx";
+import EmojiPicker from "../components/post/EmojiPicker.jsx";
 import ShareMenu from "../components/post/ShareMenu.jsx";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar.jsx";
 import useAuthStore, { selectIsAuthenticated } from "../stores/authStore.js";
 import useFeedStore from "../stores/feedStore.js";
+import insertEmojiAtCaret from "../lib/insertEmojiAtCaret.js";
 import { createReply, fetchPost } from "../services/postService.js";
 
 // Single post page: /:username/post/:postId
@@ -31,6 +33,7 @@ const PostDetail = () => {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [replyError, setReplyError] = useState("");
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const textareaRef = useRef(null);
   // Set once the store has held this post, so a delete/hide can navigate away
@@ -88,6 +91,7 @@ const PostDetail = () => {
       await createReply({ postId: post.id, content });
       toast.success("Đã gửi trả lời");
       setText("");
+      setEmojiOpen(false);
       setRefreshToken((value) => value + 1);
       bumpReplyCount(post.id);
     } catch (err) {
@@ -98,6 +102,16 @@ const PostDetail = () => {
       setSending(false);
     }
   };
+
+  // Insert the picked emoji at the caret, then put the caret back after it.
+  const insertEmoji = (emoji) =>
+    insertEmojiAtCaret({
+      node: textareaRef.current,
+      value: text,
+      emoji,
+      setValue: setText,
+      onDone: () => setEmojiOpen(false),
+    });
 
   // Go back to the previous page when there is one, otherwise to the feed.
   const handleBack = () => {
@@ -185,7 +199,26 @@ const PostDetail = () => {
                   </p>
                 )}
                 <div className="flex items-center justify-between gap-2 mt-1">
-                  <ShareMenu post={post} />
+                  <div className="flex items-center gap-1">
+                    <ShareMenu post={post} />
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setEmojiOpen((open) => !open)}
+                        aria-label="Chọn emoji"
+                        data-testid="post-detail-emoji"
+                        className="rounded-full p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      >
+                        🙂
+                      </button>
+                      {emojiOpen && (
+                        <EmojiPicker
+                          onPick={insertEmoji}
+                          onClose={() => setEmojiOpen(false)}
+                        />
+                      )}
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={handleReply}

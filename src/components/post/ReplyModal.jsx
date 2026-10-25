@@ -7,6 +7,7 @@ import EmojiPicker from "./EmojiPicker.jsx";
 import MediaPreviews from "./MediaPreviews.jsx";
 import useAuthStore from "../../stores/authStore.js";
 import useMediaPicker from "../../hooks/useMediaPicker.js";
+import insertEmojiAtCaret from "../../lib/insertEmojiAtCaret.js";
 import { createReply } from "../../services/postService.js";
 
 const REPLY_PERMISSIONS = [
@@ -63,23 +64,14 @@ const ReplyModal = ({ open, post, onClose, onPosted }) => {
 
   const canSend = (text.trim().length > 0 || files.length > 0) && !sending;
 
-  const insertEmoji = (emoji) => {
-    const node = textareaRef.current;
-    if (!node) {
-      setText((value) => value + emoji);
-      return;
-    }
-    const start = node.selectionStart ?? text.length;
-    const end = node.selectionEnd ?? text.length;
-    const next = `${text.slice(0, start)}${emoji}${text.slice(end)}`;
-    setText(next);
-    setEmojiOpen(false);
-    requestAnimationFrame(() => {
-      node.focus();
-      const caret = start + emoji.length;
-      node.setSelectionRange(caret, caret);
+  const insertEmoji = (emoji) =>
+    insertEmojiAtCaret({
+      node: textareaRef.current,
+      value: text,
+      emoji,
+      setValue: setText,
+      onDone: () => setEmojiOpen(false),
     });
-  };
 
   const handleSubmit = async () => {
     if (!canSend) return;
