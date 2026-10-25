@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import { ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import PostCard from "../components/post/PostCard.jsx";
 import CommentList from "../components/post/CommentList.jsx";
 import EmojiPicker from "../components/post/EmojiPicker.jsx";
+import MediaPreviews from "../components/post/MediaPreviews.jsx";
 import ShareMenu from "../components/post/ShareMenu.jsx";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar.jsx";
 import useAuthStore, { selectIsAuthenticated } from "../stores/authStore.js";
 import useFeedStore from "../stores/feedStore.js";
+import useMediaPicker from "../hooks/useMediaPicker.js";
 import insertEmojiAtCaret from "../lib/insertEmojiAtCaret.js";
 import { createReply, fetchPost } from "../services/postService.js";
 
@@ -34,6 +37,13 @@ const PostDetail = () => {
   const [sending, setSending] = useState(false);
   const [replyError, setReplyError] = useState("");
   const [emojiOpen, setEmojiOpen] = useState(false);
+  // One image per reply: comments render through PostCard, which shows a
+  // single image (post.image). The backend also requires content, so the Post
+  // button stays disabled until there is text.
+  const { files, previews, addFiles, removeFile, resetMedia } = useMediaPicker({
+    maxFiles: 1,
+  });
+  const fileInputRef = useRef(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const textareaRef = useRef(null);
   // Set once the store has held this post, so a delete/hide can navigate away
@@ -88,10 +98,11 @@ const PostDetail = () => {
     setSending(true);
     setReplyError("");
     try {
-      await createReply({ postId: post.id, content });
+      await createReply({ postId: post.id, content, files });
       toast.success("Đã gửi trả lời");
       setText("");
       setEmojiOpen(false);
+      resetMedia();
       setRefreshToken((value) => value + 1);
       bumpReplyCount(post.id);
     } catch (err) {
@@ -193,6 +204,12 @@ const PostDetail = () => {
                   rows={2}
                   className="w-full resize-none bg-transparent text-[15px] outline-none"
                 />
+                <MediaPreviews
+                  files={files}
+                  previews={previews}
+                  onRemove={removeFile}
+                  testId="post-detail-previews"
+                />
                 {replyError && (
                   <p role="alert" className="text-sm text-red-600">
                     {replyError}
@@ -218,6 +235,33 @@ const PostDetail = () => {
                         />
                       )}
                     </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      data-testid="post-detail-file-input"
+                      onChange={(event) => {
+                        addFiles(event.target.files);
+                        // Let the same file be picked again after removal.
+                        event.target.value = "";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={files.length > 0}
+                      aria-label="Đính kèm ảnh"
+                      title="Đính kèm ảnh"
+                      data-testid="post-detail-upload-media"
+                      className="rounded-full p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-40"
+                    >
+                      <ImagePlus
+                        className="w-5 h-5"
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
+                    </button>
                   </div>
                   <button
                     type="button"

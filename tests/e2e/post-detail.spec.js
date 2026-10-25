@@ -4,6 +4,15 @@ import { mockFeed, makeApiFeed } from "./helpers/feedFixture.js";
 
 const post = (overrides = {}) => ({ ...makeApiFeed(1)[0], ...overrides });
 
+const PNG = {
+  name: "probe.png",
+  mimeType: "image/png",
+  buffer: Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "base64",
+  ),
+};
+
 test.describe("post detail page", () => {
   test.beforeEach(async ({ page }) => {
     await mockFeed(page, { 1: makeApiFeed(1) });
@@ -126,6 +135,131 @@ test.describe("post detail page", () => {
     await expect(input).toHaveValue(/^Cảm ơn\p{Extended_Pictographic}/u);
     await expect(page.getByTestId("emoji-picker")).toHaveCount(0);
     await expect(page.getByTestId("post-detail-reply-submit")).toBeEnabled();
+  });
+
+  test("attaches one image to the inline reply and sends it as multipart", async ({
+    page,
+  }) => {
+    await seedAuth(page, { accessToken: "seeded-access-token" });
+    await page.route("**/api/posts/1", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: post() }),
+      }),
+    );
+    await page.route("**/api/posts/1/replies**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [], pagination: {} }),
+      }),
+    );
+    let payload = null;
+    await page.route("**/api/posts/1/reply", (route) => {
+      const request = route.request();
+      payload = {
+        contentType: request.headers()["content-type"] ?? "",
+        body: request.postDataBuffer()?.toString("utf8") ?? "",
+      };
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: post({ id: 778 }) }),
+      });
+    });
+
+    await page.goto("/nguyenvana/post/1");
+    const input = page.getByTestId("post-detail-reply-input");
+    const submit = page.getByTestId("post-detail-reply-submit");
+
+    await page.getByTestId("post-detail-file-input").setInputFiles(PNG);
+    await expect(page.getByTestId("post-detail-previews")).toBeVisible();
+    await expect(
+      page.getByTestId("post-detail-upload-media"),
+    ).toBeDisabled();
+    // The backend still requires content when an image is attached.
+    await expect(submit).toBeDisabled();
+
+    await input.fill("Trả lời kèm ảnh");
+    await submit.click();
+
+    await expect(page.getByText("Đã gửi trả lời")).toBeVisible();
+    await expect(page.getByTestId("post-detail-previews")).toHaveCount(0);
+    expect(payload.contentType).toContain("multipart/form-data");
+    expect(payload.body).toContain('name="media[]"');
+    expect(payload.body).toContain('filename="probe.png"');
+    expect(payload.body).toContain("Trả lời kèm ảnh");
+  });
+
+  test("removes the attached image before sending", async ({ page }) => {
+    await seedAuth(page, { accessToken: "seeded-access-token" });
+    await page.route("**/api/posts/1", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: post() }),
+      }),
+    );
+    await page.route("**/api/posts/1/replies**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [], pagination: {} }),
+      }),
+    );
+
+    await page.goto("/nguyenvana/post/1");
+    await page.getByTestId("post-detail-file-input").setInputFiles(PNG);
+    await expect(page.getByTestId("post-detail-previews")).toBeVisible();
+
+    await page.getByTestId("post-detail-previews-remove-0").click();
+    await expect(page.getByTestId("post-detail-previews")).toHaveCount(0);
+    await expect(
+      page.getByTestId("post-detail-upload-media"),
+    ).toBeEnabled();
+  });
+
+  test("keeps the draft and the image when the reply fails", async ({
+    page,
+  }) => {
+    await seedAuth(page, { accessToken: "seeded-access-token" });
+    await page.route("**/api/posts/1", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: post() }),
+      }),
+    );
+    await page.route("**/api/posts/1/replies**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [], pagination: {} }),
+      }),
+    );
+    await page.route("**/api/posts/1/reply", (route) =>
+      route.fulfill({
+        status: 422,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: false,
+          message: "Ảnh vượt quá dung lượng cho phép",
+        }),
+      }),
+    );
+
+    await page.goto("/nguyenvana/post/1");
+    const input = page.getByTestId("post-detail-reply-input");
+    await input.fill("Trả lời kèm ảnh lỗi");
+    await page.getByTestId("post-detail-file-input").setInputFiles(PNG);
+    await page.getByTestId("post-detail-reply-submit").click();
+
+    await expect(page.getByRole("alert")).toContainText(
+      "Ảnh vượt quá dung lượng cho phép",
+    );
+    await expect(input).toHaveValue("Trả lời kèm ảnh lỗi");
+    await expect(page.getByTestId("post-detail-previews")).toBeVisible();
   });
 
   test("the like button does not navigate away", async ({ page }) => {
