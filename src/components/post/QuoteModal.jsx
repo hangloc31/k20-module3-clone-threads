@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar.jsx";
 import EmojiPicker from "./EmojiPicker.jsx";
@@ -221,9 +222,10 @@ const QuoteModal = ({ open, post, onClose }) => {
               onClick={() => fileInputRef.current?.click()}
               data-testid="quote-upload-media"
               aria-label="Tải ảnh hoặc video"
+              title="Tải ảnh hoặc video"
               className="rounded-full p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
             >
-              🖼
+              <ImagePlus className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
             </button>
             <button
               type="button"
