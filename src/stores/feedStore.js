@@ -5,7 +5,6 @@ import {
   toggleLike as toggleLikeRequest,
 } from "../services/postService.js";
 import {
-  createPostMock,
   fetchFeedMock,
   toggleLikeMock,
 } from "../api/threadsMock.js";
@@ -138,19 +137,15 @@ const useFeedStore = create((set, get) => ({
     }
   },
 
-  // Creates a post through the API (falls back to the mock like the feed).
+  // Creates a post through the API. Writes are never simulated: a failed
+  // request must surface as an error, never as a post that only exists in
+  // this browser.
   createPost: async (content) => {
     const text = content?.trim();
     if (!text) throw new Error("Nội dung bài viết không được để trống");
-    try {
-      const post = await createPostRequest({ content: text });
-      set({ posts: [post, ...get().posts] });
-      return post;
-    } catch {
-      const post = await createPostMock({ content: text });
-      set({ posts: [post, ...get().posts], source: "mock" });
-      return post;
-    }
+    const post = await createPostRequest({ content: text });
+    set({ posts: [post, ...get().posts] });
+    return post;
   },
 
   // Post menu actions. The API call happens in the component; the store
