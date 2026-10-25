@@ -100,8 +100,13 @@ instance.interceptors.response.use(
       }
 
       logout();
-      // Refresh failed (or no refresh token): force back to /login
-      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      // Refresh failed (or no refresh token): force back to /login. An
+      // explicit sign-out navigates itself, so it opts out of this redirect.
+      if (
+        !original.skipAuthRefresh &&
+        typeof window !== "undefined" &&
+        window.location.pathname !== "/login"
+      ) {
         window.location.assign("/login");
       }
     }

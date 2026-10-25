@@ -7,6 +7,7 @@ export const AUTH_ENDPOINTS = {
   register: "/api/auth/register",
   refresh: "/api/auth/refresh",
   user: "/api/auth/user",
+  logout: "/api/auth/logout",
   validateUsername: "/api/auth/validate/username",
   validateEmail: "/api/auth/validate/email",
   verifyEmail: "/api/auth/verify-email",
@@ -133,6 +134,17 @@ export async function getUserInfo() {
     throw new Error("Phản hồi user info không hợp lệ");
   }
   return user;
+}
+
+// Invalidate the session on the server. Authenticated (the Bearer header is
+// what identifies the session), so this path must NOT be public.
+// Best effort: throws when the backend refuses, and the caller still clears
+// the local session. `skipAuthRefresh` keeps the axios interceptor from
+// redirecting an explicit sign-out to /login when the refresh also fails.
+export async function logoutRequest() {
+  await instance.post(AUTH_ENDPOINTS.logout, undefined, {
+    skipAuthRefresh: true,
+  });
 }
 
 // Refresh token pair. Returns { accessToken, refreshToken, expiresIn }.

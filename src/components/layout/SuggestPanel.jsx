@@ -8,7 +8,7 @@ import { Button } from "../ui/button.jsx";
 // "Gợi ý theo dõi" — fed by GET /api/users/suggestions.
 const SuggestPanel = () => {
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
+  const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
 
   const [suggestions, setSuggestions] = useState([]);
@@ -37,8 +37,9 @@ const SuggestPanel = () => {
     };
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    // Revokes the server session (best effort) before clearing local state.
+    await signOut();
     navigate("/", { replace: true });
   };
 
