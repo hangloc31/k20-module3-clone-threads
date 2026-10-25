@@ -16,7 +16,7 @@ import EmbedLayout from "./layouts/EmbedLayout";
 import AuthLayout from "./layouts/AuthLayout";
 import NotFound from "./pages/NotFound";
 
-import { GuestRoute } from "./components/ProtectedRoute";
+import { GuestRoute, ProtectedRoute } from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -24,7 +24,14 @@ function App() {
       {/* Main app shell: sidebar + feed + login panel */}
       <Route element={<DefaultLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/create" element={<Create />} />
+        <Route
+          path="/create"
+          element={
+            <ProtectedRoute redirectTo="/login">
+              <Create />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/search" element={<Search />} />
         <Route path="/activity" element={<Activity />} />
         <Route path="/profile" element={<Profile />} />

@@ -1,10 +1,10 @@
 import { Navigate } from "react-router";
 import useAuthStore, { selectIsAuthenticated } from "../stores/authStore.js";
 
-// Chặn trang cần login: chưa login -> đá về / (Home)
-export const ProtectedRoute = ({ children }) => {
+// Chặn trang cần login: chưa login -> đá về redirectTo (mặc định Home)
+export const ProtectedRoute = ({ children, redirectTo = "/" }) => {
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
-  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (!isAuthenticated) return <Navigate to={redirectTo} replace />;
   return children;
 };
 
