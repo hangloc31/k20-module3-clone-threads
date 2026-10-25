@@ -64,7 +64,6 @@ const RepostMenu = ({ post }) => {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="start" className="w-48">
-          onClick={(event) => event.stopPropagation()}
           <DropdownMenuItem
             className={itemCls}
             data-testid={`menu-repost-${post.id}`}

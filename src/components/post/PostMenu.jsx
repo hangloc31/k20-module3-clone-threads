@@ -70,9 +70,10 @@ const PostMenu = ({ post }) => {
 
   const handleSave = () =>
     run(async () => {
-      const isSaved = await savePost(post.id);
+      const { isSaved } = await savePost(post.id);
       storeSave(post.id, isSaved);
-    }, "Đã lưu bài viết");
+      toast.success(isSaved ? "Đã lưu bài viết" : "Đã hủy lưu bài viết");
+    });
 
   const handleHide = () =>
     run(async () => {
@@ -145,7 +146,6 @@ const PostMenu = ({ post }) => {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">
-          onClick={(event) => event.stopPropagation()}
           <DropdownMenuItem
             className={itemCls}
             data-testid={`menu-save-${post.id}`}
