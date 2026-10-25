@@ -195,4 +195,75 @@ test.describe("auth request headers", () => {
     );
     expect(retried).toBeTruthy();
   });
+
+  test("two 401s share one refresh instead of logging out", async ({
+    page,
+  }) => {
+    await seedAuth(page, { accessToken: "expired-access" });
+
+    let refreshCalls = 0;
+    await page.route("**/api/auth/refresh", async (route) => {
+      refreshCalls += 1;
+      // Hold the refresh open so the other 401s land while it is in flight.
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            access_token: "fresh-access",
+            refresh_token: "fresh-refresh",
+            expires_in: 3600,
+          },
+        }),
+      });
+    });
+
+    // The profile page fires four protected requests at once — the narrowest
+    // window we can create for two 401s to overlap.
+    const expireOnce = (pattern, body) => {
+      let calls = 0;
+      page.route(pattern, (route) => {
+        calls += 1;
+        if (calls === 1) {
+          return route.fulfill({
+            status: 401,
+            contentType: "application/json",
+            body: JSON.stringify({ success: false, message: "Token expired" }),
+          });
+        }
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(body),
+        });
+      });
+    };
+
+    expireOnce("**/api/auth/user", {
+      success: true,
+      data: { id: 42, username: "banner_user", email: "banner@x.com" },
+    });
+    expireOnce("**/api/users/42/followers**", {
+      success: true,
+      data: [],
+      pagination: { total: 0 },
+    });
+    expireOnce("**/api/users/42/followings**", {
+      success: true,
+      data: [],
+      pagination: { total: 0 },
+    });
+    expireOnce("**/api/users/42/reposts**", {
+      success: true,
+      data: [],
+      pagination: { total: 0 },
+    });
+
+    await page.goto("/profile");
+
+    await expect.poll(() => refreshCalls).toBe(1);
+    await expect(page).toHaveURL(/\/profile$/);
+  });
 });

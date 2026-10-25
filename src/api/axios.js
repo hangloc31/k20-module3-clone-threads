@@ -42,7 +42,33 @@ instance.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-let isRefreshing = false;
+// One refresh shared by every request that hits a 401 at the same time.
+// Without this, the second 401 would see a refresh already running and drop
+// the session instead of waiting for the new token.
+let refreshPromise = null;
+
+const refreshAccessToken = () => {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const { refreshToken } = useAuthStore.getState();
+      if (!refreshToken) throw new Error("No refresh token");
+      const next = await refreshTokens(refreshToken);
+      useAuthStore.setState({
+        accessToken: next.accessToken,
+        refreshToken: next.refreshToken,
+        expiresIn: next.expiresIn,
+        expiresAt:
+          typeof next.expiresIn === "number"
+            ? Date.now() + next.expiresIn * 1000
+            : useAuthStore.getState().expiresAt,
+      });
+      return next.accessToken;
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+};
 
 instance.interceptors.response.use(
   (response) => response,
@@ -63,25 +89,13 @@ instance.interceptors.response.use(
 
       // Try refresh if we have a refresh token; backend contract:
       // POST /api/auth/refresh { refresh_token } -> { access_token, ... }
-      if (refreshToken && !isRefreshing) {
-        isRefreshing = true;
+      if (refreshToken) {
         try {
-          const next = await refreshTokens(refreshToken);
-          useAuthStore.setState({
-            accessToken: next.accessToken,
-            refreshToken: next.refreshToken,
-            expiresIn: next.expiresIn,
-            expiresAt:
-              typeof next.expiresIn === "number"
-                ? Date.now() + next.expiresIn * 1000
-                : useAuthStore.getState().expiresAt,
-          });
-          original.headers.Authorization = `Bearer ${next.accessToken}`;
+          const accessToken = await refreshAccessToken();
+          original.headers.Authorization = `Bearer ${accessToken}`;
           return instance(original);
         } catch {
           // fall through to logout + redirect
-        } finally {
-          isRefreshing = false;
         }
       }
 
