@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getUserInfo, isEmailVerified } from "../api/auth.js";
+import { getUserInfo, isEmailVerified, logoutRequest } from "../api/auth.js";
 
 const isExpired = (expiresAt) =>
   typeof expiresAt === "number" && Date.now() >= expiresAt;
@@ -24,6 +24,9 @@ const useAuthStore = create(
               ? Date.now() + expiresIn * 1000
               : null,
         }),
+      // Local-only: drop the session without touching the network. The axios
+      // interceptor calls this on a failed refresh, so it must stay offline
+      // (a request here would loop through the same interceptor).
       logout: () =>
         set({
           user: null,
@@ -32,6 +35,16 @@ const useAuthStore = create(
           expiresIn: null,
           expiresAt: null,
         }),
+      // Explicit sign-out: revoke the session on the server first, then clear
+      // locally no matter what. Never let a failing network keep a user in.
+      signOut: async () => {
+        try {
+          await logoutRequest();
+        } catch {
+          // Expired token / offline: local cleanup below is what matters.
+        }
+        get().logout();
+      },
       // Fetch current user info (/api/auth/user) into global state.
       // Throws on failure — caller decides (login flow keeps the
       // login-response user as fallback so it never gets stuck).

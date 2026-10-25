@@ -2,11 +2,11 @@ import { useNavigate } from "react-router";
 import useAuthStore from "../stores/authStore";
 
 const Dashboard = () => {
-  const logout = useAuthStore((s) => s.logout);
+  const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate("/", { replace: true });
   };
 

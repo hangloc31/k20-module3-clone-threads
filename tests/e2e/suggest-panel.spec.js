@@ -104,4 +104,90 @@ test.describe("suggestion panel", () => {
     await expect(followBtn).toContainText("Theo dõi");
     expect(followCall).toEqual({ method: "DELETE" });
   });
+
+  const readStoredToken = (page) =>
+    page.evaluate(() => {
+      const raw = window.localStorage.getItem("auth-storage");
+      return raw ? JSON.parse(raw).state.accessToken : "missing";
+    });
+
+  test("revokes the session on the server before clearing it locally", async ({
+    page,
+  }) => {
+    await page.route("**/api/users/suggestions", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: suggestions }),
+      }),
+    );
+    let logoutCall = null;
+    await page.route("**/api/auth/logout", (route) => {
+      logoutCall = {
+        method: route.request().method(),
+        authorization: route.request().headers().authorization,
+      };
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, message: "Logged out" }),
+      });
+    });
+
+    await page.goto("/");
+    const signOutBtn = page.getByTestId("suggest-logout-btn");
+    if (!(await signOutBtn.isVisible())) {
+      test.skip(true, "suggestion panel is desktop-only");
+    }
+
+    await expect.poll(() => readStoredToken(page)).toBe("seeded-access-token");
+    await signOutBtn.click();
+
+    await expect
+      .poll(() => logoutCall)
+      .toEqual({
+        method: "POST",
+        authorization: "Bearer seeded-access-token",
+      });
+    await expect.poll(() => readStoredToken(page)).toBeNull();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test("clears the local session when the server session is already gone", async ({
+    page,
+  }) => {
+    await page.route("**/api/users/suggestions", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: suggestions }),
+      }),
+    );
+    await page.route("**/api/auth/logout", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, message: "Unauthenticated" }),
+      }),
+    );
+    await page.route("**/api/auth/refresh", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, message: "Invalid refresh" }),
+      }),
+    );
+
+    await page.goto("/");
+    const signOutBtn = page.getByTestId("suggest-logout-btn");
+    if (!(await signOutBtn.isVisible())) {
+      test.skip(true, "suggestion panel is desktop-only");
+    }
+
+    await signOutBtn.click();
+
+    await expect.poll(() => readStoredToken(page)).toBeNull();
+    // A failed sign-out must not bounce the user through /login.
+    await expect(page).toHaveURL(/\/$/);
+  });
 });
