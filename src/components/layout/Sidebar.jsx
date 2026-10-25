@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import ThreadsLogo from "../threads/ThreadsLogo.jsx";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar.jsx";
 import ThemeToggle from "../threads/ThemeToggle.jsx";
+import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
 
 const iconCls = "w-6 h-6";
 
@@ -64,17 +66,52 @@ const items = [
   { key: "home", label: "Trang chủ", to: "/", icon: Icons.homeOutline, activeIcon: Icons.home },
   { key: "create", label: "Thread mới", to: "/create", icon: Icons.create },
   { key: "search", label: "Tìm kiếm", to: "/search", icon: Icons.search },
-  { key: "messages", label: "Tin nhắn", to: "/login", icon: Icons.messages },
+  { key: "messages", label: "Tin nhắn", to: "/messages", icon: Icons.messages },
   { key: "activity", label: "Hoạt động", to: "/activity", icon: Icons.activity },
   { key: "profile", label: "Trang cá nhân", to: "/profile", icon: Icons.profile },
-  { key: "insights", label: "Thông tin chi tiết", to: "/login", icon: Icons.insights },
+  { key: "insights", label: "Thông tin chi tiết", to: "/insights", icon: Icons.insights },
 ];
+
+// One active-state rule for all three nav variants. "/" only matches exactly,
+// everything else also matches its nested routes (ex: /profile/123).
+const isActiveItem = (to, pathname) =>
+  to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`);
 
 // Three variants of the same navigation, mirroring the Threads layout:
 // full sidebar on desktop, icon rail on tablet, bottom tab bar on mobile.
 export default function Sidebar() {
   const { pathname } = useLocation();
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const user = useAuthStore((s) => s.user);
   const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef(null);
+
+  // Close the "Xem thêm" menu on outside click or Escape.
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onPointerDown = (event) => {
+      if (!moreRef.current?.contains(event.target)) setMoreOpen(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [moreOpen]);
+
+  // Avatar shown in place of the login button once signed in.
+  const avatarNode = (sizeClass) => (
+    <Avatar className={sizeClass}>
+      <AvatarImage src={user?.avatar_url ?? undefined} alt="" />
+      <AvatarFallback className="text-xs font-semibold">
+        {(user?.username ?? user?.name ?? "?").slice(0, 1).toUpperCase()}
+      </AvatarFallback>
+    </Avatar>
+  );
 
   return (
     <>
@@ -89,7 +126,7 @@ export default function Sidebar() {
 
         <nav aria-label="Primary" className="mt-8 flex flex-col gap-1">
           {items.map((it) => {
-            const active = it.key === "home" && pathname === "/";
+            const active = isActiveItem(it.to, pathname);
             return (
               <Link
                 key={it.key}
@@ -110,17 +147,34 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <Link
-          to="/login"
-          data-testid="sidebar-login-btn"
-          className="mt-6 flex items-center justify-center rounded-xl bg-black text-white dark:bg-white dark:text-black px-4 py-2.5 text-[15px] font-bold"
-        >
-          Đăng nhập
-        </Link>
+        {isAuthenticated ? (
+          <Link
+            to="/profile"
+            data-testid="sidebar-profile"
+            aria-label="Trang cá nhân của bạn"
+            className="mt-6 flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900"
+          >
+            {avatarNode("w-8 h-8")}
+            <span className="min-w-0 flex flex-col leading-tight">
+              <span className="text-[14px] font-semibold truncate">
+                {user?.username ?? user?.name}
+              </span>
+              <span className="text-[12px] text-neutral-500">Xem trang cá nhân</span>
+            </span>
+          </Link>
+        ) : (
+          <Link
+            to="/login"
+            data-testid="sidebar-login-btn"
+            className="mt-6 flex items-center justify-center rounded-xl bg-black text-white dark:bg-white dark:text-black px-4 py-2.5 text-[15px] font-bold"
+          >
+            Đăng nhập
+          </Link>
+        )}
 
         <div className="flex-1" />
 
-        <div className="relative">
+        <div className="relative" ref={moreRef}>
           {moreOpen && (
             <div
               data-testid="more-menu"
@@ -154,31 +208,51 @@ export default function Sidebar() {
         </Link>
 
         <div className="flex flex-col items-center gap-1">
-          {items.map((it) => (
-            <Link
-              key={it.key}
-              to={it.to}
-              title={it.label}
-              aria-label={it.label}
-              data-testid={`rail-${it.key}`}
-              className="p-3 rounded-2xl transition-colors text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:text-black dark:hover:text-white"
-            >
-              {it.icon}
-            </Link>
-          ))}
+          {items.map((it) => {
+            const active = isActiveItem(it.to, pathname);
+            return (
+              <Link
+                key={it.key}
+                to={it.to}
+                title={it.label}
+                aria-label={it.label}
+                aria-current={active ? "page" : undefined}
+                data-testid={`rail-${it.key}`}
+                className={`p-3 rounded-2xl transition-colors ${
+                  active
+                    ? "bg-neutral-100 text-black dark:bg-neutral-800 dark:text-white"
+                    : "text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:text-black dark:hover:text-white"
+                }`}
+              >
+                {it.icon}
+              </Link>
+            );
+          })}
         </div>
 
         <div className="flex flex-col items-center gap-1">
           <ThemeToggle variant="icon" testId="theme-toggle-rail" />
-          <Link
-            to="/login"
-            data-testid="rail-login"
-            className="rounded-xl bg-black text-white dark:bg-white dark:text-black px-4 py-2 text-sm font-bold"
-            aria-label="Đăng nhập"
-            title="Đăng nhập"
-          >
-            →
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              to="/profile"
+              data-testid="rail-account"
+              aria-label="Trang cá nhân của bạn"
+              title="Trang cá nhân"
+              className="rounded-full ring-2 ring-transparent hover:ring-neutral-300 dark:hover:ring-neutral-700"
+            >
+              {avatarNode("w-9 h-9")}
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              data-testid="rail-login"
+              className="rounded-xl bg-black text-white dark:bg-white dark:text-black px-4 py-2 text-sm font-bold"
+              aria-label="Đăng nhập"
+              title="Đăng nhập"
+            >
+              →
+            </Link>
+          )}
         </div>
       </nav>
 
@@ -188,17 +262,25 @@ export default function Sidebar() {
         aria-label="Primary mobile"
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-black/95 backdrop-blur px-2 py-2"
       >
-        {items.slice(0, 6).map((it) => (
-          <Link
-            key={it.key}
-            to={it.to}
-            aria-label={it.label}
-            data-testid={`tab-${it.key}`}
-            className="p-2.5 text-neutral-500 hover:text-black dark:hover:text-white"
-          >
-            {it.icon}
-          </Link>
-        ))}
+        {items.slice(0, 6).map((it) => {
+          const active = isActiveItem(it.to, pathname);
+          return (
+            <Link
+              key={it.key}
+              to={it.to}
+              aria-label={it.label}
+              aria-current={active ? "page" : undefined}
+              data-testid={`tab-${it.key}`}
+              className={`p-2.5 ${
+                active
+                  ? "text-black dark:text-white"
+                  : "text-neutral-500 hover:text-black dark:hover:text-white"
+              }`}
+            >
+              {it.icon}
+            </Link>
+          );
+        })}
       </nav>
     </>
   );
