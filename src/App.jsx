@@ -3,6 +3,8 @@ import Home from "./pages/Home";
 import Create from "./pages/Create";
 import Search from "./pages/Search";
 import Activity from "./pages/Activity";
+import Messages from "./pages/Messages";
+import Insights from "./pages/Insights";
 import Profile from "./pages/Profile";
 import PostDetail from "./pages/PostDetail";
 import Embed from "./pages/Embed";
@@ -34,6 +36,22 @@ function App() {
         />
         <Route path="/search" element={<Search />} />
         <Route path="/activity" element={<Activity />} />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute redirectTo="/login">
+              <Messages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/insights"
+          element={
+            <ProtectedRoute redirectTo="/login">
+              <Insights />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/profile" element={<Profile />} />
         {/* Single post: /:username/post/:postId */}
         <Route path="/:username/post/:postId" element={<PostDetail />} />
