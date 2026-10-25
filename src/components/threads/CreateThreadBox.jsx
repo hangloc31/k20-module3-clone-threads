@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { ImagePlus } from "lucide-react";
 import useAuthStore from "../../stores/authStore.js";
 import useFeedStore from "../../stores/feedStore.js";
 import useMediaPicker from "../../hooks/useMediaPicker.js";
@@ -96,10 +97,11 @@ export default function CreateThreadBox() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={files.length > 0}
                 aria-label="Đính kèm ảnh"
+                title="Đính kèm ảnh"
                 data-testid="create-thread-upload-media"
                 className="rounded-full p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-40"
               >
-                🖼
+                <ImagePlus className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
               </button>
             </div>
             <Button
