@@ -6,6 +6,7 @@ import CommentList from "../components/post/CommentList.jsx";
 import ShareMenu from "../components/post/ShareMenu.jsx";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar.jsx";
 import useAuthStore, { selectIsAuthenticated } from "../stores/authStore.js";
+import useFeedStore from "../stores/feedStore.js";
 import { createReply, fetchPost } from "../services/postService.js";
 
 // Single post page: /:username/post/:postId
@@ -16,7 +17,15 @@ const PostDetail = () => {
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const user = useAuthStore((s) => s.user);
 
-  const [post, setPost] = useState(null);
+  // Single source of truth: the same list the feed renders. Falls back to the
+  // freshly fetched copy only until the store has it.
+  const storePost = useFeedStore((s) =>
+    s.posts.find((item) => String(item.id) === String(postId)),
+  );
+  const upsertPost = useFeedStore((s) => s.upsertPost);
+  const bumpReplyCount = useFeedStore((s) => s.bumpReplyCount);
+
+  const [fetchedPost, setFetchedPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [text, setText] = useState("");
@@ -24,6 +33,11 @@ const PostDetail = () => {
   const [replyError, setReplyError] = useState("");
   const [refreshToken, setRefreshToken] = useState(0);
   const textareaRef = useRef(null);
+  // Set once the store has held this post, so a delete/hide can navigate away
+  // instead of leaving a deleted post on screen.
+  const wasInStore = useRef(false);
+
+  const post = storePost ?? fetchedPost;
 
   const username = user?.username || user?.name || user?.email || "you";
   const avatar =
@@ -33,9 +47,13 @@ const PostDetail = () => {
     let cancelled = false;
     setLoading(true);
     setError("");
+    setFetchedPost(null);
+    wasInStore.current = false;
     fetchPost(postId)
       .then((data) => {
-        if (!cancelled) setPost(data);
+        if (cancelled) return;
+        setFetchedPost(data);
+        upsertPost(data);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -50,7 +68,16 @@ const PostDetail = () => {
     return () => {
       cancelled = true;
     };
-  }, [postId]);
+  }, [postId, upsertPost]);
+
+  // The store drops the post after a delete or hide — leave the page with it.
+  useEffect(() => {
+    if (storePost) {
+      wasInStore.current = true;
+      return;
+    }
+    if (wasInStore.current) navigate("/", { replace: true });
+  }, [storePost, navigate]);
 
   const handleReply = async () => {
     const content = text.trim();
@@ -62,14 +89,7 @@ const PostDetail = () => {
       toast.success("Đã gửi trả lời");
       setText("");
       setRefreshToken((value) => value + 1);
-      setPost((current) =>
-        current
-          ? {
-              ...current,
-              repliesCount: (current.repliesCount ?? 0) + 1,
-            }
-          : current,
-      );
+      bumpReplyCount(post.id);
     } catch (err) {
       setReplyError(
         err?.response?.data?.message || "Không gửi được trả lời",
