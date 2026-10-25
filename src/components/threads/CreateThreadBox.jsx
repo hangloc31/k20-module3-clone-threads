@@ -7,7 +7,7 @@ import { Textarea } from "../ui/textarea.jsx";
 
 export default function CreateThreadBox() {
   const user = useAuthStore((s) => s.user);
-  const post = useFeedStore((s) => s.post);
+  const createPost = useFeedStore((s) => s.createPost);
   const [text, setText] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState("");
@@ -23,10 +23,14 @@ export default function CreateThreadBox() {
     setPosting(true);
     setError("");
     try {
-      await post(text);
+      await createPost(text);
       setText("");
     } catch (err) {
-      setError(err?.message || "Không đăng được thread");
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không đăng được thread",
+      );
     } finally {
       setPosting(false);
     }
