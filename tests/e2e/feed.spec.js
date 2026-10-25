@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { makeApiFeed, mockFeed } from "./helpers/feedFixture.js";
+import { makeApiFeed, makeApiPost, mockFeed } from "./helpers/feedFixture.js";
 import { seedAuth } from "./helpers/seedAuth.js";
 
 // A full page keeps the list taller than the viewport, so the infinite
@@ -108,5 +108,51 @@ test.describe("feed behaviour", () => {
       "đang hiển thị dữ liệu mẫu",
     );
     await expect(page.locator("article").first()).toBeVisible();
+  });
+
+  test("likes a real post through the API while the feed shows sample data", async ({
+    page,
+  }) => {
+    await seedAuth(page, { accessToken: "seeded-access-token" });
+    await page.route("**/api/posts/feed**", (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, message: "Server Error" }),
+      }),
+    );
+    await page.route("**/api/posts", (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      return route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: { post: makeApiPost({ id: 901, content: "Bài thật" }) },
+        }),
+      });
+    });
+    let likeCalls = 0;
+    await page.route("**/api/posts/901/like", (route) => {
+      likeCalls += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: { is_liked: true, likes_count: 1 },
+        }),
+      });
+    });
+
+    await page.goto("/");
+    await expect(page.getByTestId("feed-fallback-notice")).toBeVisible();
+
+    await page.getByTestId("create-thread-input").fill("Bài thật");
+    await page.getByTestId("create-thread-submit").click();
+    await expect(page.getByTestId("post-901")).toBeVisible();
+
+    await page.getByTestId("like-901").click();
+    await expect.poll(() => likeCalls).toBe(1);
   });
 });
