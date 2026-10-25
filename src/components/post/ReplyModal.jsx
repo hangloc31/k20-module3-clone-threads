@@ -3,7 +3,9 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar.jsx";
 import CommentList from "./CommentList.jsx";
 import EmojiPicker from "./EmojiPicker.jsx";
+import MediaPreviews from "./MediaPreviews.jsx";
 import useAuthStore from "../../stores/authStore.js";
+import useMediaPicker from "../../hooks/useMediaPicker.js";
 import { createReply } from "../../services/postService.js";
 
 const REPLY_PERMISSIONS = [
@@ -15,8 +17,13 @@ const REPLY_PERMISSIONS = [
 const ReplyModal = ({ open, post, onClose, onPosted }) => {
   const user = useAuthStore((s) => s.user);
   const [text, setText] = useState("");
-  const [files, setFiles] = useState([]);
-  const [previews, setPreviews] = useState([]);
+  const {
+    files,
+    previews,
+    addFiles,
+    removeFile,
+    resetMedia,
+  } = useMediaPicker();
   const [permission, setPermission] = useState("everyone");
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -34,14 +41,13 @@ const ReplyModal = ({ open, post, onClose, onPosted }) => {
   // Release the object URLs of the previews when they are dropped.
   useEffect(() => {
     setText("");
-    setFiles([]);
-    setPreviews([]);
+    resetMedia();
     setPermission("everyone");
     setOptionsOpen(false);
     setEmojiOpen(false);
     setError("");
     setRefreshToken((value) => value + 1);
-  }, [open, post?.id]);
+  }, [open, post?.id, resetMedia]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -55,23 +61,6 @@ const ReplyModal = ({ open, post, onClose, onPosted }) => {
   if (!open || !post) return null;
 
   const canSend = (text.trim().length > 0 || files.length > 0) && !sending;
-
-  const addFiles = (fileList) => {
-    const picked = Array.from(fileList || []);
-    if (!picked.length) return;
-    const urls = picked.map((file) => URL.createObjectURL(file));
-    setFiles((prev) => [...prev, ...picked]);
-    setPreviews((prev) => [...prev, ...urls]);
-  };
-
-  const removeFile = (index) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setPreviews((prev) => {
-      const url = prev[index];
-      if (url) URL.revokeObjectURL(url);
-      return prev.filter((_, i) => i !== index);
-    });
-  };
 
   const insertEmoji = (emoji) => {
     const node = textareaRef.current;
@@ -104,7 +93,7 @@ const ReplyModal = ({ open, post, onClose, onPosted }) => {
       });
       toast.success("Đã gửi trả lời");
       setText("");
-      setFiles([]);
+      resetMedia();
       setRefreshToken((value) => value + 1);
       onPosted?.();
     } catch (err) {
@@ -167,30 +156,12 @@ const ReplyModal = ({ open, post, onClose, onPosted }) => {
                 className="w-full resize-none bg-transparent text-[15px] outline-none"
               />
 
-              {files.length > 0 && (
-                <div
-                  className="flex flex-wrap gap-2 mt-2"
-                  data-testid="reply-previews"
-                >
-                  {previews.map((url, index) => (
-                    <div key={`${files[index]?.name}-${index}`} className="relative">
-                      <img
-                        src={url}
-                        alt={files[index]?.name}
-                        className="h-20 w-20 rounded-xl object-cover bg-neutral-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        aria-label="Xoá ảnh"
-                        className="absolute -top-2 -right-2 rounded-full bg-black text-white h-5 w-5 text-xs leading-none"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <MediaPreviews
+                files={files}
+                previews={previews}
+                onRemove={removeFile}
+                testId="reply-previews"
+              />
             </div>
           </div>
 
