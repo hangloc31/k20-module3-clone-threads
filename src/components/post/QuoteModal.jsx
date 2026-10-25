@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar.jsx";
 import EmojiPicker from "./EmojiPicker.jsx";
 import useAuthStore from "../../stores/authStore.js";
 import useFeedStore from "../../stores/feedStore.js";
+import insertEmojiAtCaret from "../../lib/insertEmojiAtCaret.js";
 import { quotePost } from "../../services/postService.js";
 
 // Quote dialog: shows the quoted post and posts your own take.
@@ -64,22 +65,14 @@ const QuoteModal = ({ open, post, onClose }) => {
     });
   };
 
-  const insertEmoji = (emoji) => {
-    const node = textareaRef.current;
-    if (!node) {
-      setText((value) => value + emoji);
-      return;
-    }
-    const start = node.selectionStart ?? text.length;
-    const end = node.selectionEnd ?? text.length;
-    setText(`${text.slice(0, start)}${emoji}${text.slice(end)}`);
-    setEmojiOpen(false);
-    requestAnimationFrame(() => {
-      node.focus();
-      const caret = start + emoji.length;
-      node.setSelectionRange(caret, caret);
+  const insertEmoji = (emoji) =>
+    insertEmojiAtCaret({
+      node: textareaRef.current,
+      value: text,
+      emoji,
+      setValue: setText,
+      onDone: () => setEmojiOpen(false),
     });
-  };
 
   const handleSubmit = async () => {
     if (!canSend) return;
