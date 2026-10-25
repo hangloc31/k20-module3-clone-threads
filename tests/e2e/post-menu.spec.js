@@ -27,6 +27,15 @@ const ok = (body = {}) =>
     body: JSON.stringify({ success: true, data: body }),
   });
 
+// Radix keeps a closing menu mounted for its exit animation, so a click on the
+// trigger during that window is swallowed. Always wait for the menu to be gone
+// before opening it again.
+const openPostMenu = async (page, id = "1") => {
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await page.getByTestId(`post-menu-${id}`).click();
+  await expect(page.getByTestId(`menu-save-${id}`)).toBeVisible();
+};
+
 test.describe("post menu", () => {
   test.beforeEach(async ({ page }) => {
     await seedUser(page);
@@ -50,18 +59,55 @@ test.describe("post menu", () => {
     await expect(page.getByTestId("menu-delete-1")).toHaveCount(0);
   });
 
-  test("saves a post and toggles the label", async ({ page }) => {
-    let saved = null;
+  test("saves a post and toggles the label both ways", async ({ page }) => {
+    let calls = 0;
     await page.route("**/api/posts/1/save", (route) => {
-      saved = route.request().method();
-      return route.fulfill(ok({ is_saved: true }));
+      calls += 1;
+      return route.fulfill(ok({ is_saved: calls === 1 }));
     });
     await page.goto("/");
-    await page.getByTestId("post-menu-1").click();
+    await openPostMenu(page);
+    await page.getByTestId("menu-save-1").click();
+    await expect(page.getByText("Đã lưu bài viết")).toBeVisible();
+
+    await openPostMenu(page);
+    await expect(page.getByTestId("menu-save-1")).toHaveText("Hủy lưu");
+    await page.getByTestId("menu-save-1").click();
+    await expect(page.getByText("Đã hủy lưu bài viết")).toBeVisible();
+
+    await openPostMenu(page);
+    await expect(page.getByTestId("menu-save-1")).toHaveText("Lưu bài viết");
+    expect(calls).toBe(2);
+  });
+
+  test("keeps the label when saving fails", async ({ page }) => {
+    await page.route("**/api/posts/1/save", (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, message: "Server Error" }),
+      }),
+    );
+    await page.goto("/");
+    await openPostMenu(page);
     await page.getByTestId("menu-save-1").click();
 
-    await expect(page.getByText("Đã lưu bài viết")).toBeVisible();
-    expect(saved).toBe("POST");
+    await expect(page.getByText("Server Error")).toBeVisible();
+
+    await openPostMenu(page);
+    await expect(page.getByTestId("menu-save-1")).toHaveText("Lưu bài viết");
+  });
+
+  test("renders no stray handler text in the menus", async ({ page }) => {
+    await page.goto("/");
+
+    await openPostMenu(page);
+    await expect(page.getByRole("menu")).not.toContainText("onClick");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+
+    await page.getByTestId("repost-1").click();
+    await expect(page.getByRole("menu")).not.toContainText("onClick");
   });
 
   test("hides a post from the feed", async ({ page }) => {
