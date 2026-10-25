@@ -199,6 +199,22 @@ const useFeedStore = create((set, get) => ({
   prependPost: (post) =>
     set({ posts: [post, ...get().posts] }),
 
+  // Keeps a post opened on its detail page in the same list the feed renders,
+  // so like / save / edit update one copy instead of two. Replaces when the
+  // post is already there, appends when the page was opened from a direct
+  // link and the feed never loaded it.
+  upsertPost: (post) =>
+    set((state) => {
+      const sameId = (item) => String(item.id) === String(post.id);
+      return {
+        posts: state.posts.some(sameId)
+          ? state.posts.map((item) =>
+              sameId(item) ? { ...item, ...post } : item,
+            )
+          : [...state.posts, post],
+      };
+    }),
+
   hidePost: (id) =>
     set({ posts: get().posts.filter((post) => post.id !== id) }),
 

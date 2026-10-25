@@ -177,4 +177,115 @@ test.describe("post detail page", () => {
     await page.goto("/nguyenvana/post/999");
     await expect(page.getByRole("alert")).toContainText("Post not found");
   });
+
+  test("likes the post from its detail page", async ({ page }) => {
+    await seedAuth(page, { accessToken: "seeded-access-token" });
+    await page.route("**/api/posts/1", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: post() }),
+      }),
+    );
+    await page.route("**/api/posts/1/replies**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [], pagination: {} }),
+      }),
+    );
+    await page.route("**/api/posts/1/like", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: { is_liked: true, likes_count: 1201 },
+        }),
+      }),
+    );
+
+    await page.goto("/");
+    await page.getByTestId("post-1").click();
+    await expect(page).toHaveURL(/\/nguyenvana\/post\/1$/);
+
+    const like = page.getByTestId("like-1");
+    await like.click();
+    await expect(like).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("likes a post opened directly, before the feed ever loaded", async ({
+    page,
+  }) => {
+    await seedAuth(page, { accessToken: "seeded-access-token" });
+    await page.route("**/api/posts/1", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: post() }),
+      }),
+    );
+    await page.route("**/api/posts/1/replies**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [], pagination: {} }),
+      }),
+    );
+    await page.route("**/api/posts/1/like", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: { is_liked: true, likes_count: 1201 },
+        }),
+      }),
+    );
+
+    await page.goto("/nguyenvana/post/1");
+    const like = page.getByTestId("like-1");
+    await like.click();
+    await expect(like).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("leaves the page after deleting your own post", async ({ page }) => {
+    await seedAuth(page, { accessToken: "seeded-access-token" });
+    const base = makeApiFeed(1)[0];
+    const mine = {
+      ...base,
+      id: 99,
+      user_id: 42,
+      content: "Bài của tôi",
+      user: { ...base.user, id: 42, username: "me" },
+    };
+    await page.route("**/api/posts/99/replies**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [], pagination: {} }),
+      }),
+    );
+    await page.route("**/api/posts/99", (route) => {
+      if (route.request().method() === "DELETE") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true, data: {} }),
+        });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: mine }),
+      });
+    });
+
+    await page.goto("/me/post/99");
+    await page.getByTestId("post-menu-99").click();
+    await page.getByTestId("menu-delete-99").click();
+    await page.getByTestId("confirm-submit").click();
+
+    await expect(page).toHaveURL(/\/$/);
+  });
 });
