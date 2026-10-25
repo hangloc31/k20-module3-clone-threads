@@ -106,9 +106,23 @@ export async function toggleLike(id) {
   };
 }
 
-// POST /api/posts — { content }
-export async function createPost({ content }) {
-  const response = await instance.post("/api/posts", { content });
+// POST /api/posts — { content } as JSON, or multipart { content, media[] }
+// when an image is attached. The backend requires content either way: an
+// image-only post is rejected with 422.
+export async function createPost({ content, files = [] }) {
+  let response;
+  if (files.length > 0) {
+    const form = new FormData();
+    form.append("content", content);
+    for (const file of files) {
+      form.append("media[]", file);
+    }
+    response = await instance.post("/api/posts", form, {
+      headers: MULTIPART,
+    });
+  } else {
+    response = await instance.post("/api/posts", { content });
+  }
   const body = response.data ?? {};
   return mapPost(body.data?.post ?? body.data ?? body);
 }

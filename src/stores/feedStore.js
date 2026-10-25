@@ -145,10 +145,10 @@ const useFeedStore = create((set, get) => ({
   // Creates a post through the API. Writes are never simulated: a failed
   // request must surface as an error, never as a post that only exists in
   // this browser.
-  createPost: async (content) => {
+  createPost: async (content, files = []) => {
     const text = content?.trim();
     if (!text) throw new Error("Nội dung bài viết không được để trống");
-    const post = await createPostRequest({ content: text });
+    const post = await createPostRequest({ content: text, files });
     set({ posts: [post, ...get().posts] });
     return post;
   },
