@@ -58,8 +58,11 @@ const useFeedStore = create((set, get) => ({
           page,
           perPage: FEED_PER_PAGE,
         });
+        // Tag sample posts so per-post actions stay inside the mock layer
+        // instead of hitting the real API with fake ids.
+        const samplePosts = posts.map((post) => ({ ...post, isSample: true }));
         set({
-          posts: reset ? posts : [...state.posts, ...posts],
+          posts: reset ? samplePosts : [...state.posts, ...samplePosts],
           page,
           hasMore: pagination
             ? page < (pagination.last_page ?? page)
@@ -102,7 +105,9 @@ const useFeedStore = create((set, get) => ({
     });
 
     try {
-      const request = get().source === "mock" ? toggleLikeMock : toggleLikeRequest;
+      // Route by the post's own origin, not by whichever source the last
+      // feed request used: sample and real posts can sit in the same list.
+      const request = target.isSample ? toggleLikeMock : toggleLikeRequest;
       const result = await request(id);
       const likesCount = result.likesCount ?? nextCount;
       set({
