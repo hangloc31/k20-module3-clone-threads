@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import ThreadsLogo from "../threads/ThreadsLogo.jsx";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar.jsx";
 import ThemeToggle from "../threads/ThemeToggle.jsx";
 import useAuthStore, { selectIsAuthenticated } from "../../stores/authStore.js";
 
@@ -82,7 +81,6 @@ const isActiveItem = (to, pathname) =>
 export default function Sidebar() {
   const { pathname } = useLocation();
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
-  const user = useAuthStore((s) => s.user);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef(null);
 
@@ -102,16 +100,6 @@ export default function Sidebar() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [moreOpen]);
-
-  // Avatar shown in place of the login button once signed in.
-  const avatarNode = (sizeClass) => (
-    <Avatar className={sizeClass}>
-      <AvatarImage src={user?.avatar_url ?? undefined} alt="" />
-      <AvatarFallback className="text-xs font-semibold">
-        {(user?.username ?? user?.name ?? "?").slice(0, 1).toUpperCase()}
-      </AvatarFallback>
-    </Avatar>
-  );
 
   return (
     <>
@@ -147,22 +135,9 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {isAuthenticated ? (
-          <Link
-            to="/profile"
-            data-testid="sidebar-profile"
-            aria-label="Trang cá nhân của bạn"
-            className="mt-6 flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900"
-          >
-            {avatarNode("w-8 h-8")}
-            <span className="min-w-0 flex flex-col leading-tight">
-              <span className="text-[14px] font-semibold truncate">
-                {user?.username ?? user?.name}
-              </span>
-              <span className="text-[12px] text-neutral-500">Xem trang cá nhân</span>
-            </span>
-          </Link>
-        ) : (
+        {/* The nav already has "Trang cá nhân", so signed-in users get no
+            second account entry here; only guests see the login button. */}
+        {!isAuthenticated && (
           <Link
             to="/login"
             data-testid="sidebar-login-btn"
@@ -232,17 +207,8 @@ export default function Sidebar() {
 
         <div className="flex flex-col items-center gap-1">
           <ThemeToggle variant="icon" testId="theme-toggle-rail" />
-          {isAuthenticated ? (
-            <Link
-              to="/profile"
-              data-testid="rail-account"
-              aria-label="Trang cá nhân của bạn"
-              title="Trang cá nhân"
-              className="rounded-full ring-2 ring-transparent hover:ring-neutral-300 dark:hover:ring-neutral-700"
-            >
-              {avatarNode("w-9 h-9")}
-            </Link>
-          ) : (
+          {/* Same rule as desktop: no second account entry in the rail. */}
+          {!isAuthenticated && (
             <Link
               to="/login"
               data-testid="rail-login"
