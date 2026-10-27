@@ -85,35 +85,31 @@ test.describe("sidebar navigation", () => {
     await page.goto("/");
     if (await page.getByTestId("threads-sidebar").isVisible()) {
       await expect(page.getByTestId("sidebar-login-btn")).toBeVisible();
-      await expect(page.getByTestId("sidebar-profile")).toHaveCount(0);
       return;
     }
     if (await page.getByTestId("threads-leftnav").isVisible()) {
       await expect(page.getByTestId("rail-login")).toBeVisible();
-      await expect(page.getByTestId("rail-account")).toHaveCount(0);
       return;
     }
     test.skip(true, "the mobile tab bar has no login button");
   });
 
-  test("shows the avatar instead of the login button when signed in", async ({
-    page,
-  }) => {
+  test("hides the login button when signed in", async ({ page }) => {
     await seedAuth(page, { accessToken: "seeded-access-token" });
     await mockAccount(page);
     await page.goto("/");
 
     if (await page.getByTestId("threads-sidebar").isVisible()) {
       await expect(page.getByTestId("sidebar-login-btn")).toHaveCount(0);
-      const profile = page.getByTestId("sidebar-profile");
-      await expect(profile).toBeVisible();
-      await expect(profile).toContainText("banner_user");
-      await profile.click();
+      // "Trang cá nhân" in the nav is the only account entry — no duplicate.
+      await expect(page.getByTestId("sidebar-profile")).toHaveCount(0);
+      await page.getByTestId("nav-profile").click();
     } else if (await page.getByTestId("threads-leftnav").isVisible()) {
       await expect(page.getByTestId("rail-login")).toHaveCount(0);
-      await page.getByTestId("rail-account").click();
+      await expect(page.getByTestId("rail-account")).toHaveCount(0);
+      await page.getByTestId("rail-profile").click();
     } else {
-      test.skip(true, "the mobile tab bar has no avatar slot");
+      test.skip(true, "the mobile tab bar has no login button");
     }
 
     await expect(page).toHaveURL(/\/profile/);
